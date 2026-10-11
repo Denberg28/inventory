@@ -1,0 +1,12 @@
+{
+  "status": "PASS",
+  "baseline_version": "0.1.0a3",
+  "baseline_commit": "c65ef374badbf9309f6d81bcb4548273a9e8afaa",
+  "baseline_store_sha256": "07c570b47f01c589bacc9703640b19c9c6349e35391c9f966581b1b513880c74",
+  "checks": [
+    "v0.1.0a3 restores v0.1.0a4 count increases/decreases/no difference/zero",
+    "leading-zero barcode and asset custody retained",
+    "recovery backup created"
+  ],
+  "limitation": "Synthetic schema-2 data; schema-1 migration remains blocked"
+}

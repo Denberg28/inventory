@@ -6,6 +6,7 @@ import tkinter as tk
 import unittest
 from pathlib import Path
 from unittest.mock import patch
+from inventory import __version__
 from inventory.store import Store, FIELDS
 from inventory.ui import App, ItemDialog, MovementDialog
 
@@ -38,6 +39,9 @@ class GuiTests(unittest.TestCase):
         self.error = self.patch.start()
 
     def tearDown(self):
+        self.wait_task()
+        for dialog in self.dialogs(tk.Toplevel):
+            dialog.destroy()
         self.patch.stop()
         try:
             self.app.close()
@@ -58,6 +62,13 @@ class GuiTests(unittest.TestCase):
         while time.monotonic() < end:
             self.root.update()
             time.sleep(0.005)
+
+    def wait_task(self):
+        end = time.monotonic() + 10
+        while self.app.busy and time.monotonic() < end:
+            self.root.update()
+            time.sleep(0.005)
+        self.assertFalse(self.app.busy, "Data worker did not finish within 10 seconds")
 
     def test_add_edit_dialog_and_category_controls(self):
         d = ItemDialog(self.app)
@@ -242,21 +253,30 @@ class GuiTests(unittest.TestCase):
                 "inventory.ui.filedialog.asksaveasfilename", return_value=str(path)
             ):
                 action()
+                self.wait_task()
             self.assertTrue(path.exists())
         self.s.create(item(id="OTHER", barcode="OTHER"))
-        with patch(
-            "inventory.ui.filedialog.askopenfilename", return_value=str(backup)
-        ), patch("inventory.ui.messagebox.askyesno", return_value=True):
+        with (
+            patch("inventory.ui.filedialog.askopenfilename", return_value=str(backup)),
+            patch("inventory.ui.messagebox.askyesno", return_value=True),
+        ):
             self.app.restore()
+            self.wait_task()
         self.assertEqual(self.s.summary()["total"], 1)
-        with patch(
-            "inventory.ui.filedialog.askopenfilename", return_value=str(template)
-        ), patch("inventory.ui.messagebox.askyesno", return_value=True):
-            self.app.import_csv()
-        with patch("inventory.ui.filedialog.askopenfilename", return_value=""), patch(
-            "inventory.ui.filedialog.asksaveasfilename", return_value=""
+        with (
+            patch(
+                "inventory.ui.filedialog.askopenfilename", return_value=str(template)
+            ),
+            patch("inventory.ui.messagebox.askyesno", return_value=True),
         ):
             self.app.import_csv()
+            self.wait_task()
+        with (
+            patch("inventory.ui.filedialog.askopenfilename", return_value=""),
+            patch("inventory.ui.filedialog.asksaveasfilename", return_value=""),
+        ):
+            self.app.import_csv()
+            self.wait_task()
             self.app.restore()
             self.app.backup()
             self.app.export()
@@ -273,12 +293,17 @@ class GuiTests(unittest.TestCase):
         self.add()
         p = self.folder / "empty.csv"
         self.s.template(p)
-        with patch(
-            "inventory.ui.filedialog.askopenfilename", return_value=str(p)
-        ), patch("inventory.ui.messagebox.askyesno", return_value=True), patch.object(
-            self.app, "refresh", side_effect=sqlite3.OperationalError("read failure")
+        with (
+            patch("inventory.ui.filedialog.askopenfilename", return_value=str(p)),
+            patch("inventory.ui.messagebox.askyesno", return_value=True),
+            patch.object(
+                self.app,
+                "refresh",
+                side_effect=sqlite3.OperationalError("read failure"),
+            ),
         ):
             self.app.import_csv()
+            self.wait_task()
         self.assertIn("imported", self.app.notice.get())
         self.assertIn("Refresh failed", self.app.notice.get())
         self.assertFalse(self.app.table.selection())
@@ -287,12 +312,196 @@ class GuiTests(unittest.TestCase):
     def test_about_and_modal_f2_guard(self):
         with patch("inventory.ui.messagebox.showinfo") as info:
             self.app.about()
-            self.assertIn("0.1.0a3", info.call_args.args[1])
+            self.assertIn(__version__, info.call_args.args[1])
         d = ItemDialog(self.app)
         with patch.object(self.app.scan_entry, "focus_set") as focus:
             self.app.focus_scan()
             focus.assert_not_called()
         d.destroy()
+
+    def test_stock_count_preview_required_fields_and_history(self):
+        self.add(category="Material", quantity=10)
+        self.assertEqual(
+            self.app.menu.entrycget(self.app.count_menu_index, "state"), "normal"
+        )
+        self.app.move("Stock count")
+        d = self.dialogs(MovementDialog)[0]
+        self.assertIn("disabled", d.confirm.state())
+        d.actor.set("Counter")
+        d.amount.set("7")
+        self.assertIn("10 -> 7 (-3)", d.preview.get())
+        self.assertIn("disabled", d.confirm.state())
+        d.note.set("Shelf count")
+        self.assertNotIn("disabled", d.confirm.state())
+        # Scanner Enter must never invoke the confirmation.
+        d.entries["amount"].focus_force()
+        self.root.update()
+        d.entries["amount"].event_generate("<Return>")
+        self.root.update()
+        self.assertEqual(self.s.get("TEST-001")["quantity"], 10)
+        d.save()
+        d.save()
+        self.assertEqual(self.s.get("TEST-001")["quantity"], 7)
+        self.assertEqual(len(self.s.history("TEST-001")), 2)
+        self.app.history()
+        text = self.dialogs(tk.Toplevel)[0].winfo_children()[0].winfo_children()[1]
+        self.assertIn("Stock count (Issue)", text.get("1.0", "end"))
+
+    def test_dirty_item_cancel_and_status_confirmation(self):
+        self.add()
+        d = ItemDialog(self.app, self.app.selected())
+        d.values["name"].set("Changed")
+        with patch("inventory.ui.messagebox.askyesno", return_value=False):
+            d.cancel()
+            self.app.close()
+        self.assertTrue(d.winfo_exists())
+        self.assertEqual(self.s.get("TEST-001")["name"], "Test equipment")
+        d.values["status"].set("Retired")
+        with patch("inventory.ui.messagebox.askyesno", return_value=False):
+            d.save()
+        self.assertFalse(d.saved)
+        with patch("inventory.ui.messagebox.askyesno", return_value=True):
+            d.save()
+        self.assertEqual(self.s.get("TEST-001")["status"], "Retired")
+        d = ItemDialog(self.app, self.app.selected())
+        with patch("inventory.ui.messagebox.askyesno") as prompt:
+            d.cancel()
+            prompt.assert_not_called()
+
+    def test_fresh_dialog_state_shortcuts_and_failed_refresh_clear_actions(self):
+        self.add()
+        self.s.movement("TEST-001", 1, "Check out", actor="Other")
+        self.app.safe(lambda: self.app.move("Check out"))
+        self.assertFalse(self.dialogs(MovementDialog))
+        self.error.assert_called_once()
+        self.app.refresh(select="TEST-001")
+        self.app.edit()
+        d = self.dialogs(ItemDialog)[0]
+        self.assertEqual(d.item["revision"], 2)
+        with patch.object(self.app, "refresh") as refresh:
+            self.app.shortcut(self.app.refresh)
+            refresh.assert_not_called()
+        d.destroy()
+        self.app.query.set("Test")
+        self.app.reload()
+        with patch.object(
+            self.s, "search", side_effect=sqlite3.OperationalError("read failed")
+        ):
+            self.app.shortcut(self.app.refresh)
+        self.assertFalse(self.app.table.selection())
+        self.assertIn("disabled", self.app.buttons["Return"].state())
+        self.assertEqual(self.app.query.get(), "Test")
+
+    def test_data_worker_responsive_blocks_duplicate_close_and_recovers(self):
+        self.add()
+        target = self.folder / "slow.sqlite3"
+        original = Store.backup
+        calls = []
+
+        def slow(worker, path):
+            calls.append(worker)
+            time.sleep(0.2)
+            return original(worker, path)
+
+        ticks = []
+        with patch.object(Store, "backup", slow):
+            self.app.data_task(
+                "Backup", "backup", target, lambda _: ticks.append("done")
+            )
+            self.root.after(10, lambda: ticks.append("heartbeat"))
+            self.app.data_task(
+                "Backup", "backup", target, lambda _: ticks.append("duplicate")
+            )
+            self.app.close()
+            self.assertTrue(self.root.winfo_exists())
+            self.assertIn("disabled", self.app.buttons["Check out"].state())
+            self.wait_task()
+        self.assertEqual(ticks, ["heartbeat", "done"])
+        self.assertEqual(len(calls), 1)
+        self.assertIsNot(calls[0], self.s)
+        self.assertTrue(target.exists())
+        self.assertFalse(self.dialogs(tk.Toplevel))
+        with patch.object(Store, "backup", side_effect=OSError("disk full")):
+            self.app.data_task(
+                "Backup",
+                "backup",
+                target,
+                lambda _: self.fail("Failed worker reported success"),
+            )
+            self.wait_task()
+        self.assertEqual(self.s.summary()["total"], 1)
+        self.assertIn("failed", self.app.notice.get())
+        self.error.assert_called_once()
+        self.app.reveal("TEST-001")
+        self.assertNotIn("disabled", self.app.buttons["Check out"].state())
+
+    def test_async_bad_import_preserves_live_data_and_existing_output(self):
+        self.add()
+        p = self.folder / "bad.csv"
+        p.write_text("wrong,headers\nx,y\n")
+        self.app.data_task(
+            "Import CSV", "import_csv", p, lambda _: self.fail("Bad import accepted")
+        )
+        self.wait_task()
+        self.assertEqual(len(self.s.history("TEST-001")), 1)
+        self.assertIn("failed", self.app.notice.get())
+        report = self.folder / "report.csv"
+        report.write_text("preserve")
+        with patch.object(
+            Store, "_atomic_file", side_effect=PermissionError("read only")
+        ):
+            self.app.data_task(
+                "Export report", "export", report, lambda _: self.fail("Write accepted")
+            )
+            self.wait_task()
+        self.assertEqual(report.read_text(), "preserve")
+
+    def test_f5_applies_pending_search_and_modal_shortcuts_keep_input(self):
+        self.add()
+        self.s.create(item(id="SECOND", barcode="SECOND", name="Another item"))
+        self.app.query.set("Another")
+        self.app.scan_entry.focus_force()
+        self.root.update()
+        self.app.scan_entry.event_generate("<F5>")
+        self.root.update()
+        self.assertEqual(tuple(self.app.rows), ("SECOND",))
+        self.assertIsNone(self.app.pending)
+        self.assertIsNone(self.app.exact_id)
+        self.app.scan_entry.event_generate("<Control-f>")
+        self.root.update()
+        self.assertEqual(self.root.focus_get(), self.app.search_entry)
+        self.app.search_entry.event_generate("<Control-n>")
+        self.root.update()
+        d = self.dialogs(ItemDialog)[0]
+        d.values["name"].set("Keyboard saved")
+        d.widgets["name"].focus_force()
+        self.root.update()
+        d.widgets["name"].event_generate("<Control-s>")
+        self.root.update()
+        self.assertTrue(d.saved)
+        self.assertEqual(self.s.summary()["total"], 3)
+
+    def test_worker_start_and_connection_failure_release_busy_modal(self):
+        p = self.folder / "backup.sqlite3"
+        with patch(
+            "inventory.ui.threading.Thread.start", side_effect=RuntimeError("No thread")
+        ):
+            self.app.data_task(
+                "Backup", "backup", p, lambda _: self.fail("Started unexpectedly")
+            )
+        self.assertFalse(self.app.busy)
+        self.assertFalse(self.dialogs(tk.Toplevel))
+        with patch(
+            "inventory.ui.Store",
+            side_effect=sqlite3.OperationalError("Database locked"),
+        ):
+            self.app.data_task(
+                "Backup", "backup", p, lambda _: self.fail("Opened unexpectedly")
+            )
+            self.wait_task()
+        self.assertFalse(self.dialogs(tk.Toplevel))
+        self.assertFalse(p.exists())
+        self.assertEqual(self.error.call_count, 2)
 
 
 class LifecycleTests(unittest.TestCase):
@@ -311,9 +520,11 @@ class LifecycleTests(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as folder:
             path = Path(folder) / "start.sqlite3"
-            with patch("inventory.ui.default_path", return_value=path), patch(
-                "inventory.ui.App", side_effect=ValueError("startup failed")
-            ), patch("inventory.ui.messagebox.showerror"):
+            with (
+                patch("inventory.ui.default_path", return_value=path),
+                patch("inventory.ui.App", side_effect=ValueError("startup failed")),
+                patch("inventory.ui.messagebox.showerror"),
+            ):
                 self.assertEqual(ui.main(), 1)
             lock = InstanceLock(path.with_suffix(".lock"))
             lock.close()
@@ -330,8 +541,9 @@ class LifecycleTests(unittest.TestCase):
                 root.after(15, app.close)
                 return app
 
-            with patch("inventory.ui.default_path", return_value=path), patch(
-                "inventory.ui.App", side_effect=short_run
+            with (
+                patch("inventory.ui.default_path", return_value=path),
+                patch("inventory.ui.App", side_effect=short_run),
             ):
                 for _ in range(3):
                     self.assertEqual(ui.main(), 0)

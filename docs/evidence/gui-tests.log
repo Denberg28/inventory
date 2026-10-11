@@ -1,9 +1,14 @@
 test_about_and_modal_f2_guard (test_ui.GuiTests.test_about_and_modal_f2_guard) ... ok
 test_add_edit_dialog_and_category_controls (test_ui.GuiTests.test_add_edit_dialog_and_category_controls) ... ok
+test_async_bad_import_preserves_live_data_and_existing_output (test_ui.GuiTests.test_async_bad_import_preserves_live_data_and_existing_output) ... ok
 test_checkout_return_and_status_actions (test_ui.GuiTests.test_checkout_return_and_status_actions) ... ok
 test_committed_import_read_failure_clears_old_selection (test_ui.GuiTests.test_committed_import_read_failure_clears_old_selection) ... ok
 test_data_menu_backup_restore_export_import_and_cancel (test_ui.GuiTests.test_data_menu_backup_restore_export_import_and_cancel) ... ok
+test_data_worker_responsive_blocks_duplicate_close_and_recovers (test_ui.GuiTests.test_data_worker_responsive_blocks_duplicate_close_and_recovers) ... ok
+test_dirty_item_cancel_and_status_confirmation (test_ui.GuiTests.test_dirty_item_cancel_and_status_confirmation) ... ok
 test_exact_scan_beyond_substring_page (test_ui.GuiTests.test_exact_scan_beyond_substring_page) ... ok
+test_f5_applies_pending_search_and_modal_shortcuts_keep_input (test_ui.GuiTests.test_f5_applies_pending_search_and_modal_shortcuts_keep_input) ... ok
+test_fresh_dialog_state_shortcuts_and_failed_refresh_clear_actions (test_ui.GuiTests.test_fresh_dialog_state_shortcuts_and_failed_refresh_clear_actions) ... ok
 test_history_shows_snapshots_and_corruption_no_window (test_ui.GuiTests.test_history_shows_snapshots_and_corruption_no_window) ... ok
 test_invalid_scan_clears_old_actions (test_ui.GuiTests.test_invalid_scan_clears_old_actions) ... ok
 test_keyboard_scan_exact_repeated_and_unknown (test_ui.GuiTests.test_keyboard_scan_exact_repeated_and_unknown) ... ok
@@ -13,12 +18,14 @@ test_pagination_cancels_deferred_search (test_ui.GuiTests.test_pagination_cancel
 test_post_commit_movement_failure_commits_once (test_ui.GuiTests.test_post_commit_movement_failure_commits_once) ... ok
 test_post_commit_refresh_failure_never_repeats_save (test_ui.GuiTests.test_post_commit_refresh_failure_never_repeats_save) ... ok
 test_retired_material_not_highlighted_or_actionable (test_ui.GuiTests.test_retired_material_not_highlighted_or_actionable) ... ok
+test_stock_count_preview_required_fields_and_history (test_ui.GuiTests.test_stock_count_preview_required_fields_and_history) ... ok
 test_unknown_barcode_add_and_cancel (test_ui.GuiTests.test_unknown_barcode_add_and_cancel) ... ok
+test_worker_start_and_connection_failure_release_busy_modal (test_ui.GuiTests.test_worker_start_and_connection_failure_release_busy_modal) ... ok
 test_actual_main_startup_exit_reopens (test_ui.LifecycleTests.test_actual_main_startup_exit_reopens) ... ok
 test_failed_main_startup_releases_os_lock (test_ui.LifecycleTests.test_failed_main_startup_releases_os_lock) ... ok
 test_twenty_actual_startup_close_cycles (test_ui.LifecycleTests.test_twenty_actual_startup_close_cycles) ... ok
 
 ----------------------------------------------------------------------
-Ran 19 tests in 2.826s
+Ran 26 tests in 4.032s
 
 OK

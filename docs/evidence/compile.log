@@ -1,1 +1,1 @@
-PASS: runtime, entry point, scripts and core/GUI tests compile
+PASS: compiled runtime, tests and scripts; Inventory 0.1.0a4; Python 3.12.14; SQLite 3.53.1

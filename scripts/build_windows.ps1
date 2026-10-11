@@ -3,8 +3,8 @@ Set-Location (Split-Path -Parent $PSScriptRoot)
 if ($env:OS -ne 'Windows_NT') { throw 'Build on Windows x64 with Python 3.12.' }
 $dirty = git status --porcelain
 if ($LASTEXITCODE -ne 0 -or $dirty) { throw 'Use a clean committed Git checkout.' }
-python -c "import sys; assert sys.version_info[:2] == (3,12)"
-if ($LASTEXITCODE -ne 0) { throw 'Python 3.12 required' }
+python -c "import sys, platform; assert sys.version_info[:2] == (3,12) and sys.maxsize > 2**32 and platform.machine().upper() in ('AMD64','X86_64')"
+if ($LASTEXITCODE -ne 0) { throw 'Windows x64 Python 3.12 required' }
 $version = python -c "from inventory import __version__; print(__version__)"
 if ($LASTEXITCODE -ne 0) { throw 'Version read failed' }
 $archive = "dist/Inventory-$version-Windows-x64-test-candidate.zip"

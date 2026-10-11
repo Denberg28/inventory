@@ -1,37 +1,28 @@
-# Candidate verification — 0.1.0a3
+# Candidate verification — 0.1.0a4
 
-11 October 2026. Reconstructed source self-review and independent software validation; original archives/fixtures were inaccessible. No earlier results are reused. Current Git commit is the source identity; delivery verification compares every remote Git blob against the reviewed local files.
+11 October 2026. Self-review of the complete repository; scoped runtime/workflow changes independently verified. Preserved known-good baseline: remote c65ef374badbf9309f6d81bcb4548273a9e8afaa (v0.1.0a3). Baseline private [CI run 38153365247](https://github.com/Denberg28/inventory/actions/runs/38153365247) passed Linux software/GUI and Windows Server 2025 x64 native build/bundled probe. Earlier lost schema-1 results are not reused. See [complete feature review](REVIEW.md).
 
-Environment: Linux x86_64, kernel 6.18.44/glibc 2.39, Python 3.12.14, Tk 9.0, SQLite 3.53.1. Actual Tk widgets ran on an authenticated isolated Xvfb desktop with synthetic test data/keyboard events. Rendered layouts were inspected at 1120x700 and 880x560 and in Add dialog; Linux bitmap fallback fonts are not native Windows typography. Formatter: Black 26.10.1, used as a temporary development tool, not a runtime dependency.
+Local environment: Linux x86_64, kernel 6.18.44/glibc 2.39, Python 3.12.14, Tk 9.0, SQLite 3.53.1. Actual Tk widgets ran on an authenticated isolated Xvfb desktop with synthetic records and keyboard events. Layouts inspected at 1120x700, 880x560, Add and Stock count dialogs; Linux fallback fonts differ from Windows Segoe UI. Black 26.10.1 was a temporary development formatter, not a runtime dependency.
 
 | Gate / check | Status | Evidence / limits |
 | --- | --- | --- |
-| A — Syntax/configuration | PASS | Compile and source checks, version/schema agreement; runtime standard library only |
-| A — Limited security checks | PASS | Runtime import/dynamic execution/secret-pattern gates and manual path/SQL/input review; not a comprehensive security audit |
-| A — Build dependency availability | PASS | All seven pinned Windows build wheels resolved/downloaded for CPython 3.12 win_amd64; PyInstaller 6.22.3 verified against official release |
-| B — Core/integration | PASS | 32 tests: custody, stock, identifiers, input, audit rollback, stale edits, CSV, report guards, backup/restore, locked handle simulation, probe and instance lock |
-| B — Actual Tk GUI | PASS — simulator tested | 19 tests: add/edit, 100 Return-key scans, unknown/invalid/cancel, asset/material actions, timers/pages, historical snapshots, data menus, saved-but-refresh-failed, long notes, About/modal focus, startup failure/lock cleanup and 20 app restart cycles plus three real main-loop restarts |
-| B — Layout | PASS on Linux display | All required main controls visible at minimum size; PNGs retained. Native Windows/DPI BLOCKED |
-| C — Schema-2 compatibility | PASS | Same-version backup restores stock/custody/history with a recovery copy |
-| C — Legacy schema-1 migration | BLOCKED | Original source/fixture unavailable; separate DB filename preserves old data, unsupported versions rejected unchanged |
-| D — Crash/lock integration | PASS — simulator tested | Uncommitted abrupt-exit rollback; committed stock/audit retained; integrity after both. Locked copy fails in approximately 0.15 s with a 0.15 s test budget; physical power loss BLOCKED |
-| D — Performance | PASS on builder | 10000 records / 20 queries; median about 4 ms against <250 ms criterion. Actual values in performance.json; target PC repeat BLOCKED |
-| E — Scanner/target PC HIL | BLOCKED | No scanner/Windows hardware available; runnable procedure in TESTING.md |
-| E — Equipment control | N/A | Scanner input only; app commands no motor/device, so authority/watchdogs/output safety do not apply |
-| F — Windows EXE / install | BLOCKED locally | Windows-only build/private CI configured and self-reviewed; no local EXE or clean target installation tested |
-| Remote CI / publication | NOT TESTED at source preparation | Push may start private CI; inspect its actual status separately. No public or stable release authorized |
+| A — Source/configuration | PASS locally | Compile/source/version/schema gates; zero runtime pip packages; unchanged package/data identity; Windows build rejects non-x64 Python |
+| A — Limited sanitization | PASS | Runtime network/dynamic-execution restrictions and secret-pattern scan across runtime/tests/scripts/workflows/docs/evidence; manual SQL/path/input/thread/handle review, not a comprehensive security audit |
+| B — Core/integration | PASS | 36 tests: identifiers, custody, stock, audit rollback, stale revisions, all count directions, CSV/report, backup/restore, handle ordering, probe/lock and actual a3 fixture |
+| B — Actual Tk GUI | PASS — simulator tested | 26 tests: baseline flows, 100 simulated scans, counts/previews, dirty/status confirmations, actual keyboard shortcuts, pending-search F5, worker heartbeat/duplicates/close/start/connection/write errors, commit/read-error distinction, layout, data menus, modal focus and lifecycle |
+| B — Layout | PASS on Linux | Main controls at minimum size; Add and Stock count layouts inspected; synthetic PNGs retained. Target Windows DPI/accessibility BLOCKED |
+| C — Schema-2 upgrade | PASS | Actual unchanged-a3-generated fixture retains IDs/leading zeros/custody/stock/history under a4; a4 backup/restore after movements/count |
+| C — Schema-2 downgrade | PASS | Unchanged a3 storage code with verified SHA-256 restores a4 count increases/decreases/no difference/zero and asset custody; compatibility.json |
+| C — Legacy schema-1 | BLOCKED | Earlier source/fixture unavailable; separate filename and version rejection retain earlier data unchanged |
+| D — Crash/lock integration | PASS — simulator tested | Abrupt-process uncommitted rollback, committed stock/audit retention and integrity; locked copy fails within test budget. Physical power loss BLOCKED |
+| D — Performance | PASS on builder | 10000 records/20 searches, median <250 ms and <=250 rows; actual values in performance.json. Target PC repeat BLOCKED |
+| D — Worker responsiveness | PASS — simulator tested | 10 ms Tk heartbeat occurs before a simulated 200 ms backup finishes; one worker/own connection, no duplicate, normal close guarded and failure modal released |
+| E — Real scanner/target PC | BLOCKED | Physical gun, target Windows 10/11 DPI/offline endurance/reconnect/suspend/resume unavailable; runnable procedure in TESTING.md |
+| E — Equipment control | N/A | Scanner input only; no device/motor commands or control authority, watchdogs or output signals |
+| F — Native Windows package | Baseline PASS; new commit requires CI | Baseline Windows Server 2025/Python 3.12.10/PyInstaller 6.22.3 built/probed successfully. Local builder cannot execute Windows EXE. Inspect successful private Actions run for exact published a4 commit before using its artifact |
+| F — Source identity/archive | Required at delivery | Compare every remote blob to reviewed source; clean-commit ZIP verifier checks all file hashes, safe paths and manifest. Archive results are reported at delivery |
+| F — Windows 10/11 clean installation/upgrade/DPI | BLOCKED | CI runner is not a separate user PC without Python, physical scanner or target display. Stable promotion blocked |
 
-32 core + 19 GUI = **51 tests passed**. Actual logs/measurements/rendered screenshots are in docs/evidence. Dependency audit for runtime third-party libraries is N/A: none are required. SQLite/Tk/Python platform security and the optional build tool supply chain are outside the limited static gate. No known critical/high defect remains within the tested scope. Missing native/HIL/legacy evidence blocks stable promotion.
+**36 core + 26 GUI = 62 tests passed locally.** Actual logs, compatibility result, performance/fault measurements and four rendered screenshots are in docs/evidence. Source identity is the commit containing these files; remote publication compares its complete tree. Each published candidate needs its own successful private CI run. No public/stable release is authorized.
 
-## Review resolutions
-
-- Stock/custody transactions begin before reads and commit audit/state together, preventing cross-namespace races and lost revisions.
-- Exact scan queries are independent of 250-row substring pages; unknown/invalid scans disable previous actions.
-- Deferred search timers cannot reset explicit pages or scans. Modal input owns F2 until it closes.
-- Successful item/movement/import/restore commits are distinguished from subsequent read errors; dialogs cannot repeat a save, and stale actions are cleared.
-- Online backup explicitly closes its destination before Windows rename; bounded retries cannot report an already committed copy as failed.
-- Restore checks expected schema/objects, full sequential revisions, snapshot/state agreement, custody, deltas and UTC times before recovery/replace.
-- Text and CSV boundaries reject missing/noncanonical input, normalize CRLF, guard report formulas and reject active DB/journal/lock outputs.
-- Preserved immutable IDs/category, separate report/import formats, one asset per record, retired records and full ledger retention keep the MVP workflow predictable.
-
-Rollback and source-loss limitations are explicit in RECOVERY.md. This is a rebuilt private source test candidate, not the lost v0.1.0a2 and not a stable release.
+No known critical/high defect remains within the tested scope. Platform security, full accessibility, physical storage behavior and optional build-tool supply-chain auditing are outside the limited gates. Missing HIL/target-install evidence blocks stable promotion. Upgrade/rollback and original-source limitations are in RECOVERY.md.

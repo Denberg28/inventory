@@ -11,6 +11,10 @@ sys.path.insert(0, str(ROOT))
 from inventory import __version__, SCHEMA_VERSION
 from inventory.selftest import run
 
+SECRET_PATTERN = re.compile(
+    r"gh[pousr]_[A-Za-z0-9]{25,}|-----BEGIN (?:RSA |EC |OPENSSH |DSA |ENCRYPTED )?PRIVATE KEY-----|sk-[A-Za-z0-9]{30,}"
+)
+
 
 def main():
     if sys.flags.optimize:
@@ -51,10 +55,7 @@ def main():
                 and node.func.id in ("eval", "exec")
             ):
                 raise SystemExit("Unexpected dynamic execution: " + str(p))
-        if re.search(
-            r"gh[pousr]_[A-Za-z0-9]{25,}|-----BEGIN .*PRIVATE KEY-----|sk-[A-Za-z0-9]{30,}",
-            source,
-        ):
+        if SECRET_PATTERN.search(source):
             raise SystemExit("Potential embedded secret: " + str(p))
     for name in (
         "README.md",
@@ -64,9 +65,29 @@ def main():
         "docs/TESTING.md",
         "docs/VERIFICATION.md",
         "docs/RECOVERY.md",
+        "docs/REVIEW.md",
     ):
         if not (ROOT / name).is_file():
             raise SystemExit("Missing " + name)
+    # Include tests, tooling, workflows, docs and evidence in the limited scan.
+    candidates = list(ROOT.glob("*"))
+    for directory in ("inventory", "tests", "tests_gui", "scripts", "docs", ".github"):
+        candidates.extend((ROOT / directory).rglob("*"))
+    for p in candidates:
+        if p.is_file() and p.suffix in {
+            ".py",
+            ".md",
+            ".toml",
+            ".txt",
+            ".yml",
+            ".json",
+            ".log",
+            ".sql",
+            ".cmd",
+            ".ps1",
+        }:
+            if SECRET_PATTERN.search(p.read_text(encoding="utf-8")):
+                raise SystemExit("Potential embedded secret: " + str(p))
     print(
         "PASS: syntax, version/schema, runtime network/dynamic execution and limited secret-pattern checks"
     )

@@ -57,6 +57,84 @@ class StoreTests(unittest.TestCase):
         self.assertEqual(self.s.lookup(" 00001234 ")["item_id"], "LAB-001")
         self.assertEqual(token("abc-1"), "ABC-1")
 
+    def test_stock_counts_audit_and_restore_for_all_directions(self):
+        self.add(category="Material", quantity=10)
+        for counted, action, delta in (
+            (7, "Issue", -3),
+            (12, "Receive", 5),
+            (12, "Edit", 0),
+            (0, "Issue", -12),
+        ):
+            r = self.s.get("LAB-001")
+            self.s.reconcile(
+                r["item_id"], r["revision"], counted, "Counter", "Physical shelf count"
+            )
+            event = self.s.history("LAB-001")[0]
+            self.assertEqual(
+                (event["action"], event["delta"], event["actor"]),
+                (action, delta, "Counter"),
+            )
+            self.assertIn("Stock count:", event["note"])
+            self.assertEqual(self.s.get("LAB-001")["quantity"], counted)
+        p = self.folder / "count-backup.sqlite3"
+        self.s.backup(p)
+        self.s.restore(p)
+        self.assertEqual(len(self.s.history("LAB-001")), 5)
+
+    def test_invalid_counts_stale_revisions_and_audit_failure_roll_back(self):
+        r = self.add(category="Material", quantity=10)
+        for count, actor, reason in (
+            (-1, "Joe", "Count"),
+            ("1.5", "Joe", "Count"),
+            (True, "Joe", "Count"),
+            (1000000000, "Joe", "Count"),
+            (2, "", "Count"),
+            (2, "Joe", ""),
+            (2, "Joe", "X" * 401),
+        ):
+            with self.assertRaises(ValueError):
+                self.s.reconcile("LAB-001", r["revision"], count, actor, reason)
+        with patch.object(
+            self.s, "_event", side_effect=sqlite3.OperationalError("disk full")
+        ):
+            with self.assertRaises(sqlite3.Error):
+                self.s.reconcile("LAB-001", r["revision"], 4, "Joe", "Count")
+        self.assertEqual(self.s.get("LAB-001"), r)
+        self.assertEqual(len(self.s.history("LAB-001")), 1)
+        self.s.reconcile("LAB-001", r["revision"], 4, "Joe", "Count")
+        with self.assertRaises(ValueError):
+            self.s.reconcile("LAB-001", r["revision"], 5, "Joe", "Count")
+        self.assertEqual(self.s.get("LAB-001")["quantity"], 4)
+
+    def test_count_rejects_asset_and_unavailable_material(self):
+        r = self.add()
+        with self.assertRaises(ValueError):
+            self.s.reconcile(r["item_id"], r["revision"], 1, "Joe", "Count")
+        r = self.add(id="MAT", category="Material", status="Maintenance")
+        with self.assertRaises(ValueError):
+            self.s.reconcile(r["item_id"], r["revision"], 1, "Joe", "Count")
+
+    def test_real_a3_schema_fixture_upgrade_and_recovery(self):
+        p = self.folder / "a3.sqlite3"
+        db = sqlite3.connect(p)
+        db.executescript(
+            (Path(__file__).parent / "fixtures/schema2-a3.sql").read_text()
+        )
+        db.close()
+        self.s.restore(p)
+        self.assertEqual(self.s.lookup("00001234")["borrower"], "Synthetic borrower")
+        self.assertEqual(self.s.get("MAT-1")["quantity"], 8)
+        self.assertEqual(self.s.get("MAT-1")["location"], "Rack B")
+        r = self.s.get("MAT-1")
+        self.s.reconcile("MAT-1", r["revision"], 6, "Counter", "Fixture count")
+        r = self.s.get("ASSET-1")
+        self.s.movement("ASSET-1", r["revision"], "Return", actor="Receiver")
+        q = self.folder / "a4.sqlite3"
+        self.s.backup(q)
+        self.s.restore(q)
+        self.assertEqual(self.s.get("MAT-1")["quantity"], 6)
+        self.assertEqual(self.s.get("ASSET-1")["status"], "Available")
+
     def test_repeated_scan_never_changes_stock_or_history(self):
         self.add()
         for _ in range(100):
@@ -289,8 +367,9 @@ class StoreTests(unittest.TestCase):
                 raise PermissionError("Simulated Windows open-handle sharing violation")
             real_replace(source, dest)
 
-        with patch("inventory.store.sqlite3.connect", side_effect=connect), patch(
-            "inventory.store.os.replace", side_effect=replace
+        with (
+            patch("inventory.store.sqlite3.connect", side_effect=connect),
+            patch("inventory.store.os.replace", side_effect=replace),
         ):
             self.s.backup(p)
         self.assertTrue(p.exists())

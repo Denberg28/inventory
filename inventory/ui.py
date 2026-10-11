@@ -2,13 +2,15 @@
 
 import csv
 import os
+import queue
 import sqlite3
+import threading
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
 
 from . import __version__
 from .instance import InstanceLock
-from .store import Store, CATEGORIES, STATUSES, FIELDS, default_path
+from .store import Store, CATEGORIES, STATUSES, FIELDS, default_path, integer, validate
 
 ERRORS = (ValueError, sqlite3.Error, OSError, csv.Error)
 
@@ -91,9 +93,7 @@ class ItemDialog(tk.Toplevel):
         ).grid(row=9, column=0, columnspan=2, sticky="w", pady=8)
         footer = ttk.Frame(frame)
         footer.grid(row=10, column=0, columnspan=2, sticky="e")
-        ttk.Button(footer, text="Cancel", command=self.destroy).pack(
-            side="left", padx=6
-        )
+        ttk.Button(footer, text="Cancel", command=self.cancel).pack(side="left", padx=6)
         ttk.Button(footer, text="Save", command=self.save).pack(side="left")
         self.widgets["category"].bind(
             "<<ComboboxSelected>>", lambda e: self.category_changed()
@@ -102,7 +102,10 @@ class ItemDialog(tk.Toplevel):
             self.widgets["item_id"].configure(state="disabled")
             self.widgets["category"].configure(state="disabled")
         self.category_changed()
-        self.bind("<Escape>", lambda e: self.destroy())
+        self.initial = self.data()
+        self.bind("<Escape>", lambda e: self.cancel())
+        self.bind("<Control-s>", lambda e: self.save())
+        self.protocol("WM_DELETE_WINDOW", self.cancel)
         self.grab_set()
         self.widgets["name"].focus_set()
 
@@ -116,12 +119,34 @@ class ItemDialog(tk.Toplevel):
             self.values["quantity"].set("1")
             self.values["min_stock"].set("0")
 
+    def data(self):
+        data = {f: v.get() for f, v in self.values.items()}
+        data["notes"] = self.widgets["notes"].get("1.0", "end-1c")
+        return data
+
+    def cancel(self):
+        if self.data() != self.initial and not messagebox.askyesno(
+            "Unsaved changes", "Discard changes to this item?", parent=self
+        ):
+            return
+        self.destroy()
+
     def save(self):
         if self.saved:
             return
-        data = {f: v.get() for f, v in self.values.items()}
-        data["notes"] = self.widgets["notes"].get("1.0", "end-1c")
+        data = self.data()
         try:
+            validate(data)
+            if (
+                data["status"] in ("Lost", "Retired")
+                and (not self.item or data["status"] != self.item["status"])
+                and not messagebox.askyesno(
+                    "Confirm status",
+                    f"Mark this item {data['status'].lower()}? Its history will be retained.",
+                    parent=self,
+                )
+            ):
+                return
             if self.item:
                 self.app.store.edit(self.item["item_id"], self.item["revision"], data)
             else:
@@ -157,18 +182,44 @@ class MovementDialog(tk.Toplevel):
         ).pack(anchor="w")
         self.actor, self.amount, self.note = (
             tk.StringVar(),
-            tk.StringVar(value="1"),
+            tk.StringVar(
+                value=str(item["quantity"]) if action == "Stock count" else "1"
+            ),
             tk.StringVar(),
         )
-        for label, var in (
-            ("Person / custodian", self.actor),
-            ("Amount", self.amount),
-            ("Note (optional)", self.note),
+        self.entries = {}
+        for key, label, var in (
+            (
+                "actor",
+                {
+                    "Check out": "Borrower",
+                    "Return": "Received by",
+                    "Receive": "Received by",
+                    "Issue": "Issued to / person",
+                    "Stock count": "Counted by",
+                }[action],
+                self.actor,
+            ),
+            (
+                "amount",
+                "Counted quantity" if action == "Stock count" else "Amount",
+                self.amount,
+            ),
+            (
+                "note",
+                "Reason (required)" if action == "Stock count" else "Note (optional)",
+                self.note,
+            ),
         ):
-            if label == "Amount" and item["category"] != "Material":
+            if key == "amount" and item["category"] != "Material":
                 continue
             ttk.Label(frame, text=label).pack(anchor="w", pady=(12, 4))
-            ttk.Entry(frame, textvariable=var, width=44).pack(fill="x")
+            self.entries[key] = ttk.Entry(frame, textvariable=var, width=44)
+            self.entries[key].pack(fill="x")
+        self.preview = tk.StringVar()
+        ttk.Label(frame, textvariable=self.preview, wraplength=420).pack(
+            anchor="w", pady=(12, 0)
+        )
         self.error = tk.StringVar()
         ttk.Label(
             frame, textvariable=self.error, foreground="#a62828", wraplength=420
@@ -178,24 +229,69 @@ class MovementDialog(tk.Toplevel):
         ttk.Button(footer, text="Cancel", command=self.destroy).pack(
             side="left", padx=6
         )
-        ttk.Button(footer, text="Confirm " + action.lower(), command=self.save).pack(
-            side="left"
+        self.confirm = ttk.Button(
+            footer, text="Confirm " + action.lower(), command=self.save
         )
+        self.confirm.pack(side="left")
+        for var in (self.actor, self.amount, self.note):
+            var.trace_add("write", self.update_preview)
+        self.update_preview()
         self.bind("<Escape>", lambda e: self.destroy())
         self.grab_set()
+        self.entries["actor"].focus_set()
+
+    def update_preview(self, *args):
+        valid = bool(self.actor.get().strip())
+        if self.item["category"] == "Material":
+            try:
+                n = integer(self.amount.get(), "Amount")
+                if self.action != "Stock count" and n == 0:
+                    raise ValueError("Amount must be greater than zero.")
+                qty = self.item["quantity"]
+                result = integer(
+                    (
+                        n
+                        if self.action == "Stock count"
+                        else qty + (n if self.action == "Receive" else -n)
+                    ),
+                    "Resulting quantity",
+                )
+                self.preview.set(f"Quantity: {qty} -> {result} ({result-qty:+d})")
+            except ValueError as exc:
+                self.preview.set(str(exc))
+                valid = False
+        else:
+            self.preview.set(
+                "Status: "
+                + self.item["status"]
+                + " -> "
+                + ("In use" if self.action == "Check out" else "Available")
+            )
+        if self.action == "Stock count":
+            valid = valid and bool(self.note.get().strip())
+        self.confirm.configure(state="normal" if valid else "disabled")
 
     def save(self):
         if self.saved:
             return
         try:
-            self.app.store.movement(
-                self.item["item_id"],
-                self.item["revision"],
-                self.action,
-                self.amount.get(),
-                self.actor.get(),
-                self.note.get(),
-            )
+            if self.action == "Stock count":
+                self.app.store.reconcile(
+                    self.item["item_id"],
+                    self.item["revision"],
+                    self.amount.get(),
+                    self.actor.get(),
+                    self.note.get(),
+                )
+            else:
+                self.app.store.movement(
+                    self.item["item_id"],
+                    self.item["revision"],
+                    self.action,
+                    self.amount.get(),
+                    self.actor.get(),
+                    self.note.get(),
+                )
         except ERRORS as exc:
             self.error.set(str(exc))
             return
@@ -207,6 +303,8 @@ class MovementDialog(tk.Toplevel):
 class App:
     def __init__(self, root, store):
         self.root, self.store = root, store
+        self.busy = False
+        self.task_poll = None
         self.rows, self.offset, self.total, self.pending, self.exact_id = (
             {},
             0,
@@ -240,9 +338,11 @@ class App:
         )
         button = ttk.Menubutton(header, text="Data")
         button.pack(side="right")
-        menu = tk.Menu(button, tearoff=False)
+        menu = self.menu = tk.Menu(button, tearoff=False)
         button.configure(menu=menu)
         for label, command in (
+            ("Refresh (F5)", self.refresh_view),
+            ("Stock count…", lambda: self.move("Stock count")),
             ("CSV template", self.template),
             ("Import CSV", self.import_csv),
             ("Export report", self.export),
@@ -252,6 +352,7 @@ class App:
             ("About", self.about),
         ):
             menu.add_command(label=label, command=lambda c=command: self.safe(c))
+        self.count_menu_index = 1
         self.counts = tk.StringVar()
         ttk.Label(body, textvariable=self.counts).grid(
             row=1, column=0, sticky="w", pady=(8, 16)
@@ -275,17 +376,16 @@ class App:
         filters.grid(row=3, column=0, sticky="ew", pady=14)
         self.query, self.category, self.status, self.low = (
             tk.StringVar(),
-            tk.StringVar(value="All"),
-            tk.StringVar(value="All"),
+            tk.StringVar(value="All categories"),
+            tk.StringVar(value="All statuses"),
             tk.BooleanVar(),
         )
         ttk.Label(filters, text="Search").pack(side="left", padx=(0, 8))
-        ttk.Entry(filters, textvariable=self.query, width=20).pack(
-            side="left", fill="x", expand=True, padx=(0, 8)
-        )
+        self.search_entry = ttk.Entry(filters, textvariable=self.query, width=20)
+        self.search_entry.pack(side="left", fill="x", expand=True, padx=(0, 8))
         for var, values, width in (
-            (self.category, ("All",) + CATEGORIES, 14),
-            (self.status, ("All",) + STATUSES, 13),
+            (self.category, ("All categories",) + CATEGORIES, 14),
+            (self.status, ("All statuses",) + STATUSES, 13),
         ):
             combo = ttk.Combobox(
                 filters, textvariable=var, values=values, width=width, state="readonly"
@@ -366,6 +466,9 @@ class App:
         self.notice_label.grid(row=7, column=0, sticky="w", pady=(8, 0))
         root.bind("<Configure>", self.resize)
         root.bind("<F2>", lambda e: self.focus_scan())
+        root.bind("<F5>", lambda e: self.shortcut(self.refresh_view))
+        root.bind("<Control-f>", lambda e: self.shortcut(self.search_entry.focus_set))
+        root.bind("<Control-n>", lambda e: self.shortcut(lambda: ItemDialog(self)))
         root.protocol("WM_DELETE_WINDOW", self.close)
         self.refresh()
         self.focus_scan()
@@ -376,10 +479,20 @@ class App:
                 label.configure(wraplength=max(300, event.width - 40))
 
     def safe(self, command):
+        if self.busy:
+            self.notice.set("Working. Wait for the data operation to finish.")
+            return
         try:
             return command()
         except ERRORS as exc:
+            self.table.selection_remove(*self.table.selection())
+            self.update_actions()
             messagebox.showerror("Inventory", str(exc), parent=self.root)
+
+    def shortcut(self, command):
+        if not self.root.grab_current():
+            self.safe(command)
+        return "break"
 
     def focus_scan(self):
         if not self.root.grab_current():
@@ -393,7 +506,8 @@ class App:
 
     def schedule(self, *args):
         self.cancel_search()
-        self.pending = self.root.after(180, self.reload)
+        if not self.busy:
+            self.pending = self.root.after(180, self.reload)
 
     def reload(self):
         self.cancel_search()
@@ -403,8 +517,8 @@ class App:
 
     def reset_filters(self):
         self.query.set("")
-        self.category.set("All")
-        self.status.set("All")
+        self.category.set("All categories")
+        self.status.set("All statuses")
         self.low.set(False)
         self.cancel_search()
         self.offset = 0
@@ -415,14 +529,21 @@ class App:
         self.safe(self.refresh)
         self.focus_scan()
 
+    def refresh_view(self):
+        if self.pending is not None or self.exact_id is not None:
+            self.offset = 0
+        self.cancel_search()
+        self.exact_id = None
+        self.refresh()
+
     def refresh(self, select=None):
         chosen = select or (
             self.table.selection()[0] if self.table.selection() else None
         )
         rows, self.total = self.store.search(
             self.query.get(),
-            self.category.get(),
-            self.status.get(),
+            "All" if self.category.get() == "All categories" else self.category.get(),
+            "All" if self.status.get() == "All statuses" else self.status.get(),
             self.low.get(),
             self.offset,
             exact_id=self.exact_id,
@@ -431,8 +552,12 @@ class App:
             self.offset = max(0, ((self.total - 1) // 250) * 250)
             rows, self.total = self.store.search(
                 self.query.get(),
-                self.category.get(),
-                self.status.get(),
+                (
+                    "All"
+                    if self.category.get() == "All categories"
+                    else self.category.get()
+                ),
+                "All" if self.status.get() == "All statuses" else self.status.get(),
                 self.low.get(),
                 self.offset,
                 exact_id=self.exact_id,
@@ -478,21 +603,43 @@ class App:
         except ValueError:
             r = None
         for label, b in self.buttons.items():
-            enabled = r is not None
+            enabled = r is not None and not self.busy
             if r and label in ("Check out", "Return"):
-                enabled = r["category"] != "Material" and r["status"] == (
-                    "Available" if label == "Check out" else "In use"
+                enabled = (
+                    not self.busy
+                    and r["category"] != "Material"
+                    and r["status"]
+                    == ("Available" if label == "Check out" else "In use")
                 )
             if r and label in ("Receive", "Issue"):
-                enabled = r["category"] == "Material" and r["status"] == "Available"
+                enabled = (
+                    not self.busy
+                    and r["category"] == "Material"
+                    and r["status"] == "Available"
+                )
             b.configure(state="normal" if enabled else "disabled")
+        self.menu.entryconfigure(
+            self.count_menu_index,
+            state=(
+                "normal"
+                if r
+                and not self.busy
+                and r["category"] == "Material"
+                and r["status"] == "Available"
+                else "disabled"
+            ),
+        )
         notes = " ".join(r["notes"].split()) if r else ""
         if len(notes) > 180:
             notes = notes[:180] + "… (Edit shows full notes)"
         self.detail.set(
             f"Barcode {r['barcode']} · Low stock at {r['min_stock']} · {notes}"
             if r
-            else "Select an item. F2 focuses the scanner field."
+            else (
+                "No matching items. Clear filters or add an item."
+                if not self.rows
+                else "Select an item. F2 focuses the scanner field."
+            )
         )
 
     def scan(self):
@@ -515,8 +662,8 @@ class App:
 
     def reveal(self, item_id):
         self.query.set("")
-        self.category.set("All")
-        self.status.set("All")
+        self.category.set("All categories")
+        self.status.set("All statuses")
         self.low.set(False)
         self.cancel_search()
         self.exact_id = item_id
@@ -554,10 +701,26 @@ class App:
             self.refresh()
 
     def edit(self):
-        ItemDialog(self, self.selected())
+        ItemDialog(self, self.store.get(self.selected()["item_id"]))
 
     def move(self, action):
-        MovementDialog(self, self.selected(), action)
+        r = self.store.get(self.selected()["item_id"])
+        allowed = (
+            r["category"] == "Material"
+            and r["status"] == "Available"
+            and action in ("Receive", "Issue", "Stock count")
+        ) or (
+            r["category"] != "Material"
+            and (
+                (action == "Check out" and r["status"] == "Available")
+                or (action == "Return" and r["status"] == "In use")
+            )
+        )
+        if not allowed:
+            raise ValueError(
+                "Action conflicts with current category/status. Refresh and select again."
+            )
+        MovementDialog(self, r, action)
 
     def history(self):
         r = self.selected()
@@ -566,8 +729,13 @@ class App:
             d = self.store._snapshot(event["snapshot"])
             if type(event["delta"]) is not int:
                 raise ValueError("History data is damaged.")
+            action = (
+                "Stock count (" + event["action"] + ")"
+                if event["note"].startswith("Stock count:")
+                else event["action"]
+            )
             lines.append(
-                f"{event['occurred_at']}  {event['action']}  {event['delta']:+d}  {event['actor']}\nStatus {d['status']} · Quantity {d['quantity']} · Location {d['location']}\nBarcode {d['barcode']} · With {d['borrower']}\n{event['note']}\nNotes: {d['notes']}\n\n"
+                f"{event['occurred_at']}  {action}  {event['delta']:+d}  {event['actor']}\nStatus {d['status']} · Quantity {d['quantity']} · Location {d['location']}\nBarcode {d['barcode']} · With {d['borrower']}\n{event['note']}\nNotes: {d['notes']}\n\n"
             )
         win = tk.Toplevel(self.root)
         win.title("History · " + r["item_id"])
@@ -595,6 +763,82 @@ class App:
             self.store.template(path)
             self.notice.set("Template saved. Add rows, then Import CSV.")
 
+    def data_task(self, label, method, path, completed):
+        """One worker owns its SQLite connection; only Tk's thread touches UI."""
+        if self.busy:
+            return
+        self.cancel_search()
+        results = queue.Queue(maxsize=1)
+        database = self.store.path
+        self.busy = True
+        self.table.selection_remove(*self.table.selection())
+        self.update_actions()
+        win = tk.Toplevel(self.root)
+        win.title(label)
+        win.transient(self.root)
+        win.resizable(False, False)
+        frame = ttk.Frame(win, padding=20)
+        frame.pack()
+        ttk.Label(frame, text=label + "…", style="Heading.TLabel").pack(anchor="w")
+        ttk.Label(
+            frame, text="Please wait. Keep Inventory open until this finishes."
+        ).pack(pady=12)
+        progress = ttk.Progressbar(frame, mode="indeterminate", length=360)
+        progress.pack(fill="x")
+        progress.start(30)
+        win.protocol(
+            "WM_DELETE_WINDOW",
+            lambda: self.notice.set(
+                "Wait for the data operation to finish before closing."
+            ),
+        )
+        win.grab_set()
+        self.notice.set(label + " in progress…")
+
+        def work():
+            try:
+                worker = Store(database)
+                try:
+                    value = getattr(worker, method)(path)
+                finally:
+                    worker.close()
+                result = (True, value)
+            except Exception as exc:
+                result = (False, f"{type(exc).__name__}: {exc}")
+            results.put(result)
+
+        def poll():
+            self.task_poll = None
+            try:
+                ok, value = results.get_nowait()
+            except queue.Empty:
+                self.task_poll = self.root.after(30, poll)
+                return
+            progress.stop()
+            win.destroy()
+            self.busy = False
+            if ok:
+                completed(value)
+            else:
+                self.notice.set(label + " failed. Review the error and retry.")
+                messagebox.showerror(label + " failed", value, parent=self.root)
+            self.update_actions()
+            self.focus_scan()
+
+        try:
+            # Non-daemon: never abandon a transaction at normal interpreter exit.
+            threading.Thread(target=work, name="inventory-data", daemon=False).start()
+        except RuntimeError as exc:
+            progress.stop()
+            win.destroy()
+            self.busy = False
+            self.update_actions()
+            self.notice.set(label + " could not start. Retry the operation.")
+            messagebox.showerror(label + " could not start", str(exc), parent=self.root)
+            self.focus_scan()
+            return
+        self.task_poll = self.root.after(30, poll)
+
     def import_csv(self):
         path = filedialog.askopenfilename(
             parent=self.root, filetypes=[("CSV", "*.csv")]
@@ -604,8 +848,12 @@ class App:
             "Add all rows from the template? Existing IDs will cause the entire import to be rejected.",
             parent=self.root,
         ):
-            count = self.store.import_csv(path)
-            self.complete_data_refresh(f"{count} items imported.")
+            self.data_task(
+                "Import CSV",
+                "import_csv",
+                path,
+                lambda count: self.complete_data_refresh(f"{count} items imported."),
+            )
 
     def export(self):
         path = filedialog.asksaveasfilename(
@@ -614,9 +862,13 @@ class App:
             initialfile="inventory-report.csv",
         )
         if path:
-            self.store.export(path)
-            self.notice.set(
-                "Report exported. Use the import template for adding items."
+            self.data_task(
+                "Export report",
+                "export",
+                path,
+                lambda _: self.notice.set(
+                    "Report exported. Use the import template for adding items."
+                ),
             )
 
     def backup(self):
@@ -626,8 +878,12 @@ class App:
             initialfile="inventory-backup.sqlite3",
         )
         if path:
-            self.store.backup(path)
-            self.notice.set("Backup saved and integrity checked.")
+            self.data_task(
+                "Backup",
+                "backup",
+                path,
+                lambda _: self.notice.set("Backup saved and integrity checked."),
+            )
 
     def restore(self):
         path = filedialog.askopenfilename(
@@ -638,9 +894,13 @@ class App:
             "Replace current records with this backup? A recovery copy of current data will be saved first.",
             parent=self.root,
         ):
-            recovery = self.store.restore(path)
-            self.complete_data_refresh(
-                "Restored. Previous data saved at " + str(recovery)
+            self.data_task(
+                "Restore backup",
+                "restore",
+                path,
+                lambda recovery: self.complete_data_refresh(
+                    "Restored. Previous data saved at " + str(recovery)
+                ),
             )
 
     def data_folder(self):
@@ -654,11 +914,22 @@ class App:
     def about(self):
         messagebox.showinfo(
             "Inventory",
-            f"Inventory {__version__}\nAuthor: MD\nDrone laboratory equipment, tools and materials.\nOffline · single workstation · whole unit stock\nUSB keyboard scanner with Enter suffix · F2 focus\nRebuilt private test candidate · schema 2\nData: {self.store.path}",
+            f"Inventory {__version__}\nAuthor: MD\nDrone laboratory equipment, tools and materials.\nOffline · single workstation · whole unit stock\nUSB keyboard scanner with Enter suffix · F2 focus\nF5 refresh · Ctrl+F search · Ctrl+N add · Ctrl+S save item\nStock count: select a material, then Data -> Stock count\nPrivate test candidate · schema 2\nData: {self.store.path}",
             parent=self.root,
         )
 
     def close(self):
+        if self.busy:
+            self.notice.set("Wait for the data operation to finish before closing.")
+            return
+        dialog = self.root.grab_current()
+        if isinstance(dialog, ItemDialog):
+            dialog.cancel()
+            if dialog.winfo_exists():
+                return
+        elif dialog:
+            # A modal movement still owns input; close it explicitly first.
+            return
         self.cancel_search()
         self.store.close()
         self.root.destroy()

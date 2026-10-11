@@ -2,8 +2,8 @@
   "status": "PASS",
   "records": 10000,
   "queries": 20,
-  "median_search_ms": 3.797,
-  "max_search_ms": 5.184,
-  "import_ms": 432.739,
+  "median_search_ms": 4.01,
+  "max_search_ms": 5.439,
+  "import_ms": 472.744,
   "criterion": "Median <250 ms; <=250 visible rows"
 }

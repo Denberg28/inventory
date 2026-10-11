@@ -336,6 +336,34 @@ class Store:
                 raise ValueError("Item changed. Refresh and try again.")
             self._event(old["item_id"], action, delta, actor, note)
 
+    def reconcile(self, item_id, revision, counted, actor, reason):
+        """Record a physical count using schema-2-compatible adjustment events."""
+        counted = integer(counted, "Counted quantity")
+        actor, reason = text(actor, 120, "Counted by"), text(reason, 400, "Reason")
+        if not actor or not reason:
+            raise ValueError("Counted by and a reason are required.")
+        with self.db:
+            self.db.execute("BEGIN IMMEDIATE")
+            old = self.get(item_id)
+            if old["category"] != "Material" or old["status"] != "Available":
+                raise ValueError("Stock count requires an available material.")
+            delta = counted - old["quantity"]
+            cursor = self.db.execute(
+                "UPDATE items SET quantity=?,revision=revision+1,updated_at=? "
+                "WHERE item_id=? AND revision=?",
+                (counted, now(), old["item_id"], revision),
+            )
+            if cursor.rowcount != 1:
+                raise ValueError("Item changed. Refresh and count again.")
+            action = "Receive" if delta > 0 else "Issue" if delta < 0 else "Edit"
+            self._event(
+                old["item_id"],
+                action,
+                delta,
+                actor,
+                f"Stock count: {old['quantity']} -> {counted}. Reason: {reason}",
+            )
+
     def search(
         self,
         query="",
