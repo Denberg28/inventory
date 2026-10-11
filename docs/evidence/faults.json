@@ -1,0 +1,11 @@
+{
+  "status": "PASS",
+  "checks": [
+    "uncommitted abrupt exit rollback",
+    "committed abrupt exit retained stock and audit",
+    "integrity after both exits",
+    "busy SQLite copy bounded failure"
+  ],
+  "busy_copy_seconds": 0.151,
+  "limitation": "Process simulation; not physical power loss"
+}

@@ -1,0 +1,2 @@
+PASS: syntax, version/schema, runtime network/dynamic execution and limited secret-pattern checks
+Inventory 0.1.0a3: self test PASS (disposable database)

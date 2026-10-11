@@ -1,0 +1,47 @@
+name: Verify private candidate
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  software:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m unittest discover -s tests -v
+      - run: python scripts/check_source.py
+      - run: python scripts/fault_checks.py
+      - run: python scripts/performance.py
+  linux-ui:
+    needs: software
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: sudo apt-get update && sudo apt-get install -y xvfb
+      - run: xvfb-run -a python -m unittest discover -s tests_gui -v
+  windows-candidate:
+    needs: [software, linux-ui]
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install -r requirements-build.txt
+      - run: ./scripts/build_windows.ps1
+        shell: pwsh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Inventory-Windows-x64-test-candidate
+          path: |
+            dist/Inventory-*-Windows-x64-test-candidate.zip
+            dist/*-SHA256.txt
+          if-no-files-found: error
