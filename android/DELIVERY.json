@@ -1,14 +1,10 @@
 {
-  "version": "0.2.0-rc.4",
-  "version_code": 4,
-  "date": "2026-10-27",
-  "timezone": "Asia/Manila",
-  "baseline_commit": "4625a0aabdcc0ce7ee8962d5c3b0314625579092",
-  "tier": "unsigned rebuild prerelease",
-  "scope": "Version/build metadata only; app behavior, UI, schema and runtime dependencies unchanged",
-  "validation": "Current results and exact source SHA are generated in the release BUILD-MANIFEST.json after CI passes",
-  "signing": "UNSIGNED; original Preview key required before installation",
-  "package": "ph.dronelab.inventory.preview",
+  "version": "0.2.0-rc.5",
+  "version_code": 5,
+  "tier": "signed Candidate installation repair",
+  "package": "ph.dronelab.inventory.candidate",
+  "status": "Prepare; promotion requires passed Android 16 install smoke test and retained signing recovery",
   "schema": 1,
-  "physical_device": "NOT TESTED"
+  "physical_phone": "NOT TESTED",
+  "prior_unsigned_apks": "Developer artifacts only; not installable"
 }

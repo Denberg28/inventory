@@ -78,3 +78,13 @@ stale/completed-loan rejection, encrypted persistence/recovery, CSV/backup compa
 live return summary and cancellation and invalid quantity handling. APK distribution additionally
 requires the existing rc.2 Preview signer; never promote an ephemeral CI debug APK as
 a compatible upgrade. Earlier screenshots and evidence are labeled rc.2 only.
+
+## Installable Candidate release gate
+
+Verify SDK apksigner succeeds and v2 signatures are present. On an Android 16 emulator,
+install the checksum-verified rc.2 Preview APK and the exact signed Candidate APK; both
+packages must remain installed. Launch Candidate and require a live process and no
+AndroidRuntime crash. Reinstall that exact APK with adb install -r. Record APK hash,
+package, version and API in INSTALL-CHECK.json. Promote the same artifact only after its
+private signing recovery has been retained. This does not establish physical camera,
+credential, Keystore or real-phone backup migration validation.

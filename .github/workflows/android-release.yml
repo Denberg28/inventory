@@ -1,20 +1,40 @@
-name: Publish Android unsigned build
+name: Verify and publish signed Android Candidate
 on:
   push:
     branches: [main]
     paths: ['.github/workflows/android-release.yml', 'android/release-request.json']
   pull_request:
-    paths: ['.github/workflows/android-release.yml', 'android/release-request.json', 'android/scripts/package_unsigned_release.py', 'android/app/build.gradle']
+    paths: ['.github/workflows/android-release.yml', 'android/release-request.json', 'android/scripts/**', 'android/app/build.gradle', '.github/signing/**']
   workflow_dispatch:
 permissions:
   contents: read
 concurrency:
-  group: android-release-${{ github.ref }}
+  group: android-candidate-${{ github.ref }}
   cancel-in-progress: false
 jobs:
-  build:
+  plan:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    outputs:
+      stage: ${{ steps.request.outputs.stage }}
+      build_run_id: ${{ steps.request.outputs.build_run_id }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: request
+        run: |
+          python3 - <<'PYCODE'
+          import json, os
+          data = json.load(open('android/release-request.json'))
+          assert data['kind'] == 'signed-candidate'
+          assert data['stage'] in ['prepare', 'publish']
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as out:
+              out.write('stage=' + data['stage'] + '\n')
+              out.write('build_run_id=' + str(data.get('build_run_id', '')) + '\n')
+          PYCODE
+  prepare:
+    needs: plan
+    if: needs.plan.outputs.stage == 'prepare'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -26,30 +46,79 @@ jobs:
           packages: 'platform-tools'
       - uses: gradle/actions/setup-gradle@v4
       - run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
-      - name: Verify and build unsigned packages
-        working-directory: android
-        run: chmod +x gradlew && ./gradlew --no-daemon -PinventoryUnsignedPreview=true testDebugUnitTest lintDebug lintRelease assembleDebug assembleRelease
-      - name: Validate and package release assets
-        working-directory: android
+      - name: Initialize signing outside the source tree
         env:
-          SOURCE_COMMIT: ${{ github.sha }}
-        run: python3 scripts/package_unsigned_release.py --source-commit "$SOURCE_COMMIT"
+          INVENTORY_CANDIDATE_KEYSTORE_BASE64: ${{ secrets.INVENTORY_CANDIDATE_KEYSTORE_BASE64 }}
+          INVENTORY_CANDIDATE_STORE_PASSWORD: ${{ secrets.INVENTORY_CANDIDATE_STORE_PASSWORD }}
+        run: python3 android/scripts/candidate_signing.py create
+      - name: Verify and build signed Candidate
+        working-directory: android
+        run: chmod +x gradlew && ./gradlew --no-daemon testDebugUnitTest lintDebug lintRelease lintCandidate assembleDebug assembleRelease assembleCandidate
+      - name: Encrypt recovery and remove plaintext signing files
+        if: always()
+        run: python3 android/scripts/candidate_signing.py backup
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Inventory-candidate-signing-recovery
+          path: deliverables/private/*.p7m
+          if-no-files-found: error
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Verify Android 16 installation and launch
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 36
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          emulator-boot-timeout: 300
+          script: python3 android/scripts/install_candidate_smoke.py
+      - name: Package exact signed and installed APK
+        run: python3 android/scripts/package_candidate_release.py
       - uses: actions/upload-artifact@v4
         with:
-          name: Inventory-unsigned-release-assets
+          name: Inventory-candidate-release-assets
           path: deliverables/publish/*
           if-no-files-found: error
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: Inventory-unsigned-release-evidence
+          name: Inventory-candidate-install-evidence
           path: |
+            android/app/build/evidence/
             android/app/build/reports/
             android/app/build/test-results/
-            android/app/build/evidence/
+          if-no-files-found: error
+  verify-promotion:
+    needs: plan
+    if: needs.plan.outputs.stage == 'publish'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: Inventory-candidate-release-assets
+          run-id: ${{ needs.plan.outputs.build_run_id }}
+          github-token: ${{ github.token }}
+          path: publish
+      - name: Verify retained-key artifact promotion
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 android/scripts/verify_candidate_promotion.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Inventory-verified-candidate-release
+          path: publish/*
           if-no-files-found: error
   publish:
-    needs: build
+    needs: verify-promotion
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
@@ -57,25 +126,19 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          name: Inventory-unsigned-release-assets
+          name: Inventory-verified-candidate-release
           path: publish
-      - name: Publish without replacing an existing release
-        working-directory: publish
+      - working-directory: publish
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-          SOURCE_COMMIT: ${{ github.sha }}
-        shell: bash
         run: |
           version="$(python3 -c 'import glob,json; print(json.load(open(glob.glob("*BUILD-MANIFEST.json")[0]))["version"])')"
+          source="$(python3 -c 'import glob,json; print(json.load(open(glob.glob("*BUILD-MANIFEST.json")[0]))["source_commit"])')"
           tag="android-v${version}"
-          if gh release view "$tag" >/dev/null 2>&1; then
-            echo "Release already exists; refusing to overwrite it."
-            exit 1
-          fi
-          if gh api "repos/$GH_REPO/git/ref/tags/$tag" >/dev/null 2>&1; then
-            echo "Tag already exists; refusing to reuse it."
+          if gh release view "$tag" >/dev/null 2>&1 || gh api "repos/$GH_REPO/git/ref/tags/$tag" >/dev/null 2>&1; then
+            echo "Existing version is preserved; refusing to overwrite release or tag."
             exit 1
           fi
           sha256sum -c *SHA256SUMS.txt
-          gh release create "$tag" ./* --repo "$GH_REPO" --target "$SOURCE_COMMIT" --prerelease --latest=false --title "Inventory Android v${version} — UNSIGNED build" --notes-file "Inventory-Android-v${version}-RELEASE-NOTES.md"
+          gh release create "$tag" ./* --repo "$GH_REPO" --target "$source" --prerelease --latest=false --title "Inventory Android v${version} — signed Candidate" --notes-file "Inventory-Android-v${version}-RELEASE-NOTES.md"

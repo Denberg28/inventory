@@ -159,3 +159,11 @@ protection, signing continuity and previous releases. Never publish secrets/user
 known critical/high defects. This authorizes routine publication without asking again;
 it does not authorize visibility/signing changes, force pushes, destructive actions,
 new costs or expanded access. Report concrete access/publication blockers accurately.
+
+## Installation repair gate — 27 October 2026
+
+User-facing phone downloads must be signed APKs, verified with apksigner and installed/
+launched in an emulator before publication. Candidate uses the independent package
+ph.dronelab.inventory.candidate and a retained private signing key. Never substitute an
+ephemeral signer or ask users to uninstall their existing app to fix a certificate mismatch.
+Only promote the exact installer-tested artifact after private signing recovery is saved.

@@ -1,8 +1,10 @@
 {
-  "version": "0.2.0-rc.4",
-  "kind": "unsigned-preview-build",
-  "package": "ph.dronelab.inventory.preview",
-  "installation": "Blocked until signed with the existing rc.2 Preview key",
-  "version_code": 4,
-  "summary": "Unsigned rebuild of rc.3; application behavior, UI, schema and runtime dependencies are unchanged."
+  "version": "0.2.0-rc.5",
+  "version_code": 5,
+  "kind": "signed-candidate",
+  "stage": "prepare",
+  "package": "ph.dronelab.inventory.candidate",
+  "label": "Inventory Candidate",
+  "initial_signing_bootstrap": true,
+  "summary": "Fix invalid unsigned downloads with a signed Candidate installer that coexists with the previous apps."
 }

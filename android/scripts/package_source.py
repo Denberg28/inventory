@@ -16,7 +16,7 @@ with zipfile.ZipFile(output, 'w', zipfile.ZIP_DEFLATED) as archive:
         rel = path.relative_to(root)
         if any(part in exclude for part in rel.parts) or path.name == 'local.properties':
             continue
-        if path.suffix in {'.jks', '.keystore', '.enc', '.dlinv', '.apk'}:
+        if path.suffix in {'.jks', '.keystore', '.p12', '.pfx', '.key', '.pass', '.enc', '.dlinv', '.apk'}:
             raise RuntimeError(f'Unexpected sensitive/binary artifact in source: {rel}')
         archive.write(path, pathlib.Path('Inventory-Android') / rel)
 with zipfile.ZipFile(output) as archive:
