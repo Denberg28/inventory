@@ -56,12 +56,6 @@ public class PreviewTest {
         org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();
     org.robolectric.shadows.ShadowLooper.runUiThreadTasksIncludingDelayedTasks();
     captureView(returnDialog.getWindow().getDecorView(), "return-dialog", 360, 640);
-    returnDialog.getButton(android.app.AlertDialog.BUTTON_POSITIVE).performClick();
-    android.app.AlertDialog review =
-        org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();
-    org.robolectric.shadows.ShadowLooper.runUiThreadTasksIncludingDelayedTasks();
-    captureView(review.getWindow().getDecorView(), "return-review", 360, 500);
-    review.dismiss();
     returnDialog.dismiss();
     a.rescheduleForm(a.model.loans.get(0).id);
     android.app.AlertDialog reschedule =

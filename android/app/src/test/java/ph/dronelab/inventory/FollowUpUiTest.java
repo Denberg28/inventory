@@ -24,7 +24,7 @@ public class FollowUpUiTest {
   }
 
   @Test
-  public void returnReviewShowsPartialBalanceAndCancelDoesNotChangeInventory() {
+  public void returnSummaryUpdatesAndCancelDoesNotChangeInventory() {
     MainActivity a = open();
     String before = Model.JSON.toJson(a.model);
     a.returnForm(a.model.loans.get(0).id);
@@ -35,13 +35,17 @@ public class FollowUpUiTest {
       if (v instanceof EditText && "Quantity returned".contentEquals(v.getContentDescription()))
         ((EditText) v).setText("2");
     }
-    assertEquals("Review return", form.getButton(AlertDialog.BUTTON_POSITIVE).getText());
-    form.getButton(AlertDialog.BUTTON_POSITIVE).performClick();
-    AlertDialog review = ShadowAlertDialog.getLatestAlertDialog();
-    assertEquals("Confirm return?", Shadows.shadowOf(review).getTitle());
-    assertTrue(Shadows.shadowOf(review).getMessage().toString().contains("Still to return: 3"));
-    review.getButton(AlertDialog.BUTTON_NEGATIVE).performClick();
-    assertTrue(form.isShowing());
+    assertEquals("Record return", form.getButton(AlertDialog.BUTTON_POSITIVE).getText());
+    TextView summary = fields.findViewWithTag("return-summary");
+    assertTrue(summary.getText().toString().contains("3 still outstanding"));
+    Spinner condition = null;
+    for (int n = 0; n < fields.getChildCount(); n++)
+      if (fields.getChildAt(n) instanceof Spinner) condition = (Spinner) fields.getChildAt(n);
+    assertNotNull(condition);
+    condition.setSelection(1);
+    org.robolectric.shadows.ShadowLooper.runUiThreadTasksIncludingDelayedTasks();
+    assertTrue(summary.getText().toString().contains("entire item/lot will be on hold"));
+    form.getButton(AlertDialog.BUTTON_NEGATIVE).performClick();
     assertEquals(before, Model.JSON.toJson(a.model));
     a.onStop();
     a.onDestroy();

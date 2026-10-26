@@ -980,8 +980,37 @@ public final class MainActivity extends Activity {
             new String[] {"Available", "Damaged", "Maintenance"},
             "Available");
     EditText note = field(f, "Notes", "", false);
-    f.addView(
-        label("A damaged return places this entire item/lot on hold until reviewed.", 13, MUTED));
+    TextView summary = label("", 14, NAVY);
+    summary.setTag("return-summary");
+    summary.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
+    f.addView(summary);
+    Runnable updateSummary = () -> {
+      try {
+        int n = number(qty);
+        model.validateReturn(loanId, n, condition.getSelectedItem().toString(), "");
+        boolean hold = !condition.getSelectedItem().toString().equals("Available");
+        summary.setText("Returning " + n + " · " + (l.quantity - l.returned - n)
+            + " still outstanding" + (hold ? "\nThis entire item/lot will be on hold." : ""));
+        summary.setTextColor(hold ? 0xff914323 : NAVY);
+      } catch (IllegalArgumentException ex) {
+        summary.setText("Enter a quantity from 1–" + (l.quantity - l.returned) + ".");
+        summary.setTextColor(0xff914323);
+      }
+    };
+    qty.addTextChangedListener(new TextWatcher() {
+      public void beforeTextChanged(CharSequence value, int start, int count, int after) {}
+      public void onTextChanged(CharSequence value, int start, int before, int count) {
+        updateSummary.run();
+      }
+      public void afterTextChanged(Editable value) {}
+    });
+    condition.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
+      public void onItemSelected(android.widget.AdapterView<?> parent, View view, int position, long id) {
+        updateSummary.run();
+      }
+      public void onNothingSelected(android.widget.AdapterView<?> parent) {}
+    });
+    updateSummary.run();
     AlertDialog d = dialog("Record return", f);
     button(f, "Change return date", () -> {
       d.dismiss();
@@ -989,23 +1018,13 @@ public final class MainActivity extends Activity {
     }, false);
     button(
         f,
-        "Review return",
+        "Record return",
         () -> {
           try {
             int n = number(qty);
             String c = condition.getSelectedItem().toString(), nt = val(note);
             model.validateReturn(loanId, n, c, nt);
-            new SafeDialog(this)
-                .setTitle("Confirm return?")
-                .setMessage(model.item(l.itemId).name + "\n" + l.borrower
-                    + "\nReturning: " + n + " · Condition: " + c
-                    + "\nStill to return: " + (l.quantity - l.returned - n)
-                    + (nt.isEmpty() ? "" : "\nNote: " + nt)
-                    + (!c.equals("Available") ? "\nThis entire item/lot will be on hold." : ""))
-                .setNegativeButton("Back", null)
-                .setPositiveButton("Record return", (confirm, which) ->
-                    mutate("Recording return", m -> m.receive(loanId, n, c, nt), d))
-                .show();
+            mutate("Recording return", m -> m.receive(loanId, n, c, nt), d);
           } catch (Exception ex) {
             error(ex);
           }

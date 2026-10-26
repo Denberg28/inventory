@@ -75,6 +75,6 @@ physical phones. No Windows executable or external barcode gun is required by th
 See `FOLLOW_UP.md` for measurable acceptance and the device procedure. Required automated
 coverage includes audited due-date changes, partial-custody preservation, past/unchanged/
 stale/completed-loan rejection, encrypted persistence/recovery, CSV/backup compatibility,
-return review cancellation and invalid quantity handling. APK distribution additionally
+live return summary and cancellation and invalid quantity handling. APK distribution additionally
 requires the existing rc.2 Preview signer; never promote an ephemeral CI debug APK as
 a compatible upgrade. Earlier screenshots and evidence are labeled rc.2 only.

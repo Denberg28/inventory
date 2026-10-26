@@ -2,8 +2,8 @@
 
 - Audited due-date changes for open issues, with mandatory reason, stale-date rejection
   and no change to original issue time, borrower, quantities or return history.
-- Return review displays item, borrower, quantity, condition and remaining balance
-  before committing; cancel preserves the form.
+- Return form displays original issue date/notes and a live remaining-balance summary;
+  held-condition warning updates with the selection. Routine returns keep one save action.
 - Return forms show original issue date and issue notes.
 - Date pickers remove dismissed dialog references and open overdue dates at today.
 - Source-kit filenames follow the configured app version; CI builds/lints both variants.

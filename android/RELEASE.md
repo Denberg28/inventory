@@ -4,7 +4,7 @@ Baseline: `b7f758d` (main, published rc.2 Preview plus release policy).
 Date: 27 October 2026, Asia/Manila. Schema and encrypted-backup format remain version 1.
 No runtime dependency, package identity or Windows source/data change.
 
-Changes: audited return-date changes, original issue context and return review before
+Changes: audited return-date changes, original issue context and live return summary before
 saving. See `docs/FOLLOW_UP.md` and `docs/TESTING.md`.
 
 ## Build and publication
