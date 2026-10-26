@@ -177,22 +177,26 @@ public final class Model {
     }
   }
 
-  public void receive(String loanId, int qty, String condition, String note) {
+  String validateReturn(String loanId, int qty, String condition, String note) {
     Loan l = loan(loanId);
-    Item i = item(l.itemId);
     check(qty > 0 && qty <= l.quantity - l.returned, "Return exceeds outstanding quantity");
     check(
         Arrays.asList("Available", "Damaged", "Maintenance").contains(condition),
         "Choose a return condition");
-    note = text(note, 500, false);
+    return text(note, 500, false);
+  }
+
+  public void receive(String loanId, int qty, String condition, String note) {
+    note = validateReturn(loanId, qty, condition, note);
+    Loan l = loan(loanId);
+    Item i = item(l.itemId);
     l.returned += qty;
     // A damaged return holds the whole material lot until the operator edits its status.
     if (!condition.equals("Available")) i.status = condition;
     audit(i.id, "RETURN", qty + " · issue " + l.id + " · " + condition + " · " + note);
   }
 
-  /** Correct an open loan's due date without rewriting custody or its original issue. */
-  public void reschedule(String loanId, String expectedDue, String due, String reason) {
+  String validateReschedule(String loanId, String expectedDue, String due, String reason) {
     Loan l = loan(loanId);
     check(l.returned < l.quantity, "This issue is already fully returned");
     check(Objects.equals(l.due, expectedDue), "Return date changed; reopen this issue");
@@ -204,14 +208,21 @@ public final class Model {
     }
     check(!next.isBefore(LocalDate.now()), "Return date cannot be in the past");
     check(!next.toString().equals(l.due), "Choose a different return date");
-    reason = text(reason, 500, true);
+    return text(reason, 500, true);
+  }
+
+  /** Correct an open loan's due date without rewriting custody or its original issue. */
+  public void reschedule(String loanId, String expectedDue, String due, String reason) {
+    reason = validateReschedule(loanId, expectedDue, due, reason);
+    Loan l = loan(loanId);
+    String next = LocalDate.parse(due).toString();
     Map<String, String> detail = new LinkedHashMap<>();
     detail.put("issue_id", l.id);
     detail.put("borrower", l.borrower);
     detail.put("previous_due", l.due);
-    detail.put("new_due", next.toString());
+    detail.put("new_due", next);
     detail.put("reason", reason);
-    l.due = next.toString();
+    l.due = next;
     audit(l.itemId, "RESCHEDULE", JSON.toJson(detail));
   }
 

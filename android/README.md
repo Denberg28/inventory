@@ -31,8 +31,7 @@ keys and must not be treated as compatible upgrades. See `RELEASE.md` and
    keeps the form without saving. **Change return date** requires a new date and reason;
    review and confirm it. The original date/reason remain in item history, and CSV reports
    show the current due date. Completed loans cannot be rescheduled.
-    Damaged/Maintenance returns hold
-   the entire item/material lot until an operator reviews its status. They do not silently
+   Damaged/Maintenance returns hold the entire item/material lot until an operator reviews its status. They do not silently
    return damaged stock to service.
 6. **Edit** updates details and owned quantity; quantity cannot fall below outstanding
    custody. Category and ID are fixed after registration. Changes are recorded in history.

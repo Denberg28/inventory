@@ -994,8 +994,7 @@ public final class MainActivity extends Activity {
           try {
             int n = number(qty);
             String c = condition.getSelectedItem().toString(), nt = val(note);
-            Model preview = model.copy();
-            preview.receive(loanId, n, c, nt);
+            model.validateReturn(loanId, n, c, nt);
             new SafeDialog(this)
                 .setTitle("Confirm return?")
                 .setMessage(model.item(l.itemId).name + "\n" + l.borrower
@@ -1048,7 +1047,7 @@ public final class MainActivity extends Activity {
     button(f, "Review date change", () -> {
       try {
         String next = date[0], explanation = val(reason), previous = loan.due;
-        model.copy().reschedule(loanId, previous, next, explanation);
+        model.validateReschedule(loanId, previous, next, explanation);
         new SafeDialog(this)
             .setTitle("Change return date?")
             .setMessage(loan.borrower + "\n" + previous + " → " + next + "\nReason: " + explanation)
