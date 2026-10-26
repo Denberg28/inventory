@@ -1,3 +1,13 @@
+# Verification — 0.2.0-rc.3 development
+
+Current evidence and acceptance: `FOLLOW_UP.md` and `../DELIVERY.json`.
+Required remote build/test checks are pending on the exact source commit.
+Local Gradle bootstrap is blocked by restricted dependency network access.
+APK publication is blocked by the unavailable rc.2 Preview signing key.
+Historical evidence below applies only to rc.2, never the current source.
+
+---
+
 # Verification — 0.2.0-rc.2
 
 26 October 2026. Tier: controlled Android test candidate. Baseline commit:

@@ -191,6 +191,30 @@ public final class Model {
     audit(i.id, "RETURN", qty + " · issue " + l.id + " · " + condition + " · " + note);
   }
 
+  /** Correct an open loan's due date without rewriting custody or its original issue. */
+  public void reschedule(String loanId, String expectedDue, String due, String reason) {
+    Loan l = loan(loanId);
+    check(l.returned < l.quantity, "This issue is already fully returned");
+    check(Objects.equals(l.due, expectedDue), "Return date changed; reopen this issue");
+    LocalDate next;
+    try {
+      next = LocalDate.parse(due);
+    } catch (Exception e) {
+      throw new IllegalArgumentException("Choose a valid return date");
+    }
+    check(!next.isBefore(LocalDate.now()), "Return date cannot be in the past");
+    check(!next.toString().equals(l.due), "Choose a different return date");
+    reason = text(reason, 500, true);
+    Map<String, String> detail = new LinkedHashMap<>();
+    detail.put("issue_id", l.id);
+    detail.put("borrower", l.borrower);
+    detail.put("previous_due", l.due);
+    detail.put("new_due", next.toString());
+    detail.put("reason", reason);
+    l.due = next.toString();
+    audit(l.itemId, "RESCHEDULE", JSON.toJson(detail));
+  }
+
   public void archive(String id, boolean value) {
     Item i = item(id);
     check(outstanding(id) == 0, "Return all issued quantities before archiving this item");

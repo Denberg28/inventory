@@ -1,8 +1,16 @@
-# Inventory for Android — 0.2.0-rc.2
+# Inventory for Android — 0.2.0-rc.3 development
 
 A minimal, offline inventory app for a drone laboratory. Register inventory with the
 phone camera, issue tools/materials, and follow outstanding returns. This is a new native
 Android implementation; the Windows app and its database remain separate.
+
+## Current build status
+
+rc.3 adds audited return-date changes and a return review step. It is a development
+build, not a published APK update. The rc.2 Preview signing key is unavailable in this
+workspace; preserve the installed app and its data. CI debug APKs use temporary test
+keys and must not be treated as compatible upgrades. See `RELEASE.md` and
+`docs/FOLLOW_UP.md` for acceptance, current evidence and publication blockers.
 
 ## Use
 
@@ -18,7 +26,12 @@ Android implementation; the Windows app and its database remain separate.
 4. Open an item, choose **Issue**, enter borrower name/ID, quantity and due date, and
    confirm. Borrowed materials and tools appear in **Unreturned**, ordered by due date.
    For consumed materials, explicitly check **Consumed material**; no return is expected.
-5. Open a loan to record a complete or partial return. Damaged/Maintenance returns hold
+5. Open a loan to record a complete or partial return. Tap **Review return**, check the
+   borrower, quantity, condition and remaining balance, then **Record return**. **Back**
+   keeps the form without saving. **Change return date** requires a new date and reason;
+   review and confirm it. The original date/reason remain in item history, and CSV reports
+   show the current due date. Completed loans cannot be rescheduled.
+    Damaged/Maintenance returns hold
    the entire item/material lot until an operator reviews its status. They do not silently
    return damaged stock to service.
 6. **Edit** updates details and owned quantity; quantity cannot fall below outstanding
