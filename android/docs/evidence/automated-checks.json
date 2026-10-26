@@ -1,9 +1,17 @@
 {
-  "version": "0.2.0-rc.1",
+  "version": "0.2.0-rc.2",
   "date": "2026-10-26",
-  "tier": "debug-signed Android test candidate",
+  "tier": "debug-signed Preview test candidate",
+  "baseline_commit": "933e8ec04a14c707f0f08bfa4d08166bd1ecd0ac",
+  "build_targets": {
+    "testDebugUnitTest": "PASS",
+    "assembleDebug": "PASS",
+    "assembleRelease": "PASS",
+    "lintDebug": "PASS",
+    "lintRelease": "PASS"
+  },
   "tests": {
-    "tests": 36,
+    "tests": 41,
     "failures": 0,
     "errors": 0,
     "skipped": 0
@@ -39,29 +47,44 @@
     },
     {
       "name": "ph.dronelab.inventory.UiTest",
-      "tests": 6,
+      "tests": 11,
       "failures": 0,
       "errors": 0,
       "skipped": 0
     }
   ],
   "lint": {
-    "errors": 0,
-    "warnings": 0
+    "debug": {
+      "errors": 0,
+      "warnings": 0
+    },
+    "release": {
+      "errors": 0,
+      "warnings": 0
+    }
   },
   "apk": {
-    "name": "Inventory-Android-v0.2.0-rc.1-test.apk",
-    "sha256": "a9e85306ff38aacf5470a65738d8eaacc389beea215222623bba4d56d367eebd",
-    "bytes": 499820,
-    "package": "ph.dronelab.inventory",
+    "name": "Inventory-Android-v0.2.0-rc.2-Preview.apk",
+    "sha256": "a1b2070c75e2f2fe1a6ce6e912f7133338ce827b4261e41a1c3538c836d8b0b2",
+    "bytes": 557122,
+    "package": "ph.dronelab.inventory.preview",
+    "label": "Inventory Preview",
+    "version_code": 2,
     "min_sdk": 26,
     "target_sdk": 35,
     "permissions": [
       "android.permission.CAMERA"
     ],
-    "signature": "APK v2 verified; Android Debug test signer"
+    "signer_sha256": "df5a504e375d94a473b043c8e903fcee3b3805c9f0cde4c2b5af95c248d67025",
+    "signature_verification": "PASS"
   },
-  "implementation_sha256": "714254d2aefa0887259b382a796c0ed1cf0371cab111172b2c8925b9d3d3bb33",
+  "release_package": "ph.dronelab.inventory",
+  "release_build": "unsigned; build verified; not distributed",
+  "baseline_signer_sha256": "a232676e09d307d5905411fe78123673c2b9d349efc50341851667a414fd89b9",
+  "same_signer_as_rc1": false,
+  "install_behavior": "Separate Preview app; independent data and keys; no synchronization",
+  "schema": 1,
+  "implementation_sha256": "3c03569814ff013597030bef6988eb9d1c76763244b25b9359f5414307f9bc41",
   "physical_device": "NOT TESTED",
   "camera_hardware": "NOT TESTED",
   "android_keystore_hardware": "NOT TESTED",

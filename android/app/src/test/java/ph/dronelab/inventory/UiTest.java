@@ -28,6 +28,8 @@ public class UiTest {
   public void phoneHomeAndRegisterDialogRender() {
     MainActivity a = open();
     assertNotNull(a.search);
+    assertEquals("Data", a.getString(R.string.data));
+    assertEquals("Inventory Preview", a.getString(R.string.app_name));
     assertEquals(0, a.model.items.size());
     a.edit(null, "000001234");
     assertTrue(ShadowAlertDialog.getLatestAlertDialog().isShowing());
@@ -109,6 +111,115 @@ public class UiTest {
     assertFalse(a.unlocked);
     assertFalse(ShadowAlertDialog.getLatestAlertDialog().isShowing());
     assertTrue(a.root.getChildAt(a.root.getChildCount() - 1) instanceof Button);
+    a.onStop();
+    a.onDestroy();
+  }
+
+  Model.Item add(MainActivity a, String id, String category, int total) {
+    Model.Item item = new Model.Item();
+    item.id = id;
+    item.code = "000" + id;
+    item.name = "Item " + id;
+    item.category = category;
+    item.total = total;
+    item.minimum = category.equals("Material") ? 5 : 0;
+    a.model.save(item, true);
+    return item;
+  }
+
+  @Test
+  public void attentionFiltersPreserveStockAndCustody() {
+    MainActivity a = open();
+    add(a, "T", "Tool", 1);
+    add(a, "M", "Material", 10);
+    a.model.issue("M", 6, "Student", java.time.LocalDate.now().toString(), "", false);
+    a.filter = 3;
+    a.home();
+    assertEquals(1, a.list.getChildCount());
+    assertEquals(4, a.model.available("M"));
+    a.filter = 2;
+    a.home();
+    assertEquals(1, a.list.getChildCount());
+    a.filter = 1;
+    a.home();
+    assertEquals(2, a.list.getChildCount());
+    a.onStop();
+    a.onDestroy();
+  }
+
+  @Test
+  public void dueTodayAndOverdueDoNotOverlapAndCodeSearchWorks() {
+    MainActivity a = open();
+    add(a, "T", "Tool", 1);
+    a.model.issue("T", 1, "Student", java.time.LocalDate.now().toString(), "", false);
+    a.tab = 1;
+    a.filter = 1;
+    a.home();
+    assertEquals(2, a.list.getChildCount());
+    a.filter = 2;
+    a.query = "000T";
+    a.home();
+    assertEquals(1, a.list.getChildCount());
+    a.model.loans.get(0).due = java.time.LocalDate.now().minusDays(1).toString();
+    a.filter = 1;
+    a.home();
+    assertEquals(1, a.list.getChildCount());
+    assertEquals(1, a.model.outstanding("T"));
+    a.onStop();
+    a.onDestroy();
+  }
+
+  @Test
+  public void unavailableIssueIsDisabledAndDismissRemainsAvailable() {
+    MainActivity a = open();
+    add(a, "T", "Tool", 1);
+    a.model.issue("T", 1, "Student", java.time.LocalDate.now().toString(), "", false);
+    a.details("T");
+    android.app.AlertDialog d = ShadowAlertDialog.getLatestAlertDialog();
+    assertFalse(d.getButton(android.app.AlertDialog.BUTTON_POSITIVE).isEnabled());
+    assertEquals("OK", d.getButton(android.app.AlertDialog.BUTTON_NEGATIVE).getText().toString());
+    a.onStop();
+    a.onDestroy();
+  }
+
+  @Test
+  public void primaryActionIsOutsideScrollAndDismissCleansRegistry() {
+    MainActivity a = open();
+    a.edit(null, "0001");
+    android.app.AlertDialog d = ShadowAlertDialog.getLatestAlertDialog();
+    Button save = d.getButton(android.app.AlertDialog.BUTTON_POSITIVE);
+    assertEquals("Save item", save.getText().toString());
+    assertEquals(View.VISIBLE, save.getVisibility());
+    assertTrue(save.getMinimumHeight() >= a.dp(48));
+    // Native themes may wrap the whole dialog; the form's own scroller must not
+    // contain the action row.
+    ViewParent formScroller = a.formDialogs.keySet().iterator().next().getParent();
+    assertTrue(formScroller instanceof ScrollView);
+    ViewParent parent = save.getParent();
+    while (parent != null) {
+      assertNotSame(formScroller, parent);
+      parent = parent.getParent();
+    }
+    d.dismiss();
+    org.robolectric.shadows.ShadowLooper.runUiThreadTasksIncludingDelayedTasks();
+    assertTrue(a.formDialogs.isEmpty());
+    assertTrue(a.dialogs.isEmpty());
+    a.onStop();
+    a.onDestroy();
+  }
+
+  @Test
+  public void tabReselectionPreservesSearchButNewViewResetsFilter() {
+    MainActivity a = open();
+    a.query = "cabinet";
+    a.filter = 3;
+    a.switchTab(0);
+    assertEquals("cabinet", a.query);
+    assertEquals(3, a.filter);
+    a.switchTab(1);
+    assertEquals("", a.query);
+    assertEquals(0, a.filter);
+    assertEquals("All unreturned", a.filterName());
     a.onStop();
     a.onDestroy();
   }

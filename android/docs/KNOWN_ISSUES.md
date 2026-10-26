@@ -1,5 +1,9 @@
 # Candidate limits
 
+- rc.2 debug builds install as Inventory Preview, with an independent package/data store.
+  The original rc.1 app stays installed. Preview changes do not synchronize back. The
+  local test signer differs from rc.1; in-place upgrades require the original signer.
+
 - Physical phone camera, credential/permission lifecycle, Keystore, document-provider,
   power-loss and signing upgrade behavior remain NOT TESTED. Do not label stable.
 - One phone; no simultaneous operators, roles, cloud synchronization or offline merge.

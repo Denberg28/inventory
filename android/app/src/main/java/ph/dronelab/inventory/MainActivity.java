@@ -31,7 +31,8 @@ public final class MainActivity extends Activity {
   LinearLayout root, list;
   EditText search;
   String query = "";
-  int tab = 0, visibleLimit = 200;
+  int tab = 0, visibleLimit = 200, filter = 0;
+  final Map<LinearLayout, AlertDialog> formDialogs = new IdentityHashMap<>();
   ScrollView itemScroll;
   int scrollPosition = 0;
   boolean unlocked = false,
@@ -62,6 +63,8 @@ public final class MainActivity extends Activity {
     if (state != null) {
       query = state.getString("query", "");
       tab = state.getInt("tab", 0);
+      filter = state.getInt("filter", 0);
+      showArchived = state.getBoolean("archived", false);
     }
     locked();
   }
@@ -71,6 +74,8 @@ public final class MainActivity extends Activity {
     super.onSaveInstanceState(b);
     b.putString("query", query);
     b.putInt("tab", tab);
+    b.putInt("filter", filter);
+    b.putBoolean("archived", showArchived);
   }
 
   @Override
@@ -96,9 +101,15 @@ public final class MainActivity extends Activity {
   }
 
   @Override
+  public void onConfigurationChanged(android.content.res.Configuration config) {
+    super.onConfigurationChanged(config);
+    if (model != null && unlocked && resumed) home();
+  }
+
+  @Override
   public void onStop() {
     super.onStop();
-    for (Dialog d : dialogs) if (d.isShowing()) d.dismiss();
+    for (Dialog d : new ArrayList<>(dialogs)) if (d.isShowing()) d.dismiss();
     dialogs.clear();
     resumed = false;
     stopped = SystemClock.elapsedRealtime();
@@ -141,7 +152,7 @@ public final class MainActivity extends Activity {
   }
 
   void locked() {
-    for (Dialog d : dialogs) if (d.isShowing()) d.dismiss();
+    for (Dialog d : new ArrayList<>(dialogs)) if (d.isShowing()) d.dismiss();
     dialogs.clear();
     root = column();
     root.setPadding(dp(24), dp(60), dp(24), dp(24));
@@ -245,6 +256,7 @@ public final class MainActivity extends Activity {
     public AlertDialog show() {
       AlertDialog d = super.show();
       dialogs.add(d);
+      d.setOnDismissListener(x -> dialogs.remove(d));
       return d;
     }
   }
@@ -283,6 +295,19 @@ public final class MainActivity extends Activity {
   }
 
   Button button(LinearLayout box, String title, Runnable action, boolean primary) {
+    AlertDialog formDialog = formDialogs.get(box);
+    if (primary && formDialog != null) {
+      Button actionButton = formDialog.getButton(AlertDialog.BUTTON_POSITIVE);
+      actionButton.setText(title);
+      actionButton.setAllCaps(false);
+      actionButton.setVisibility(View.VISIBLE);
+      actionButton.setMinHeight(dp(48));
+      actionButton.setOnClickListener(
+          v -> {
+            if (!busy) action.run();
+          });
+      return actionButton;
+    }
     Button b = new Button(this);
     b.setText(title);
     b.setAllCaps(false);
@@ -290,6 +315,8 @@ public final class MainActivity extends Activity {
     b.setTextColor(primary ? Color.WHITE : NAVY);
     b.setBackground(shape(primary ? NAVY : 0xffeaf0f7));
     b.setMinHeight(dp(48));
+    b.setMinimumHeight(dp(48));
+    b.setPadding(dp(12), dp(8), dp(12), dp(8));
     LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(-1, -2);
     p.setMargins(0, dp(5), 0, dp(5));
     box.addView(b, p);
@@ -324,42 +351,64 @@ public final class MainActivity extends Activity {
     root.setBackgroundColor(BG);
     setContentView(root);
     insets(root);
+    boolean compact =
+        getResources().getConfiguration().orientation
+            == android.content.res.Configuration.ORIENTATION_LANDSCAPE;
     LinearLayout top = row();
-    TextView title = label("Inventory", 27, NAVY);
+    TextView title =
+        label(tab == 1 ? "Unreturned" : showArchived ? "Archived items" : "Inventory", 25, NAVY);
     title.setTypeface(null, Typeface.BOLD);
+    if (Build.VERSION.SDK_INT >= 28) title.setAccessibilityHeading(true);
     top.addView(title, new LinearLayout.LayoutParams(0, -2, 1));
-    Button more = new Button(this);
-    more.setText(R.string.data);
-    more.setBackground(shape(Color.WHITE));
-    more.setMinHeight(dp(48));
-    more.setAllCaps(false);
-    more.setTextColor(NAVY);
-    top.addView(more);
-    more.setOnClickListener(v -> dataMenu());
+    if (compact) {
+      Button scanAction = button(top, "Scan label", this::scan, true);
+      LinearLayout.LayoutParams sp = new LinearLayout.LayoutParams(dp(116), -2);
+      sp.setMargins(dp(8), dp(4), dp(8), dp(4));
+      scanAction.setLayoutParams(sp);
+      if (tab == 0 && !showArchived) {
+        Button registerAction = button(top, "+ Register item", () -> edit(null, ""), true);
+        LinearLayout.LayoutParams rp = new LinearLayout.LayoutParams(dp(144), -2);
+        rp.setMargins(0, dp(4), dp(8), dp(4));
+        registerAction.setLayoutParams(rp);
+      }
+    }
+    Button data = button(top, getString(R.string.data), this::dataMenu, false);
+    data.setLayoutParams(new LinearLayout.LayoutParams(dp(72), -2));
     root.addView(top);
-    int open = 0, overdue = 0;
+    int open = 0, overdue = 0, low = 0;
     for (Model.Loan l : model.loans)
       if (l.quantity > l.returned) {
         open++;
         if (LocalDate.parse(l.due).isBefore(LocalDate.now())) overdue++;
       }
-    root.addView(
-        label(
-            (model.items.stream().filter(i -> !i.archived).count())
-                + " items   ·   "
-                + open
-                + " unreturned   ·   "
-                + overdue
-                + " overdue",
-            13,
-            MUTED));
+    Map<String, Integer> balances = outstandingByItem();
+    for (Model.Item i : model.items)
+      if (!i.archived
+          && i.category.equals("Material")
+          && i.total - balances.getOrDefault(i.id, 0) <= i.minimum) low++;
+    if (!compact)
+      root.addView(
+          label(
+              tab == 1
+                  ? open + " open issues · " + overdue + " overdue"
+                  : model.items.stream().filter(i -> i.archived == showArchived).count()
+                      + (showArchived ? " archived items" : " items · " + low + " low stock"),
+              13,
+              MUTED));
     search = new EditText(this);
     search.setSingleLine();
     search.setTextSize(15);
-    search.setHint(tab == 1 ? "Search item or borrower" : "Search name, ID or scan code");
+    search.setMinHeight(dp(48));
+    search.setPadding(dp(14), dp(8), dp(14), dp(8));
+    search.setBackground(shape(Color.WHITE));
+    search.setHint(tab == 1 ? "Search item, ID or borrower" : "Search name, ID, code or location");
     search.setText(query);
-    search.setContentDescription("Search inventory");
-    root.addView(search);
+    search.setContentDescription(tab == 1 ? "Search unreturned items" : "Search inventory");
+    LinearLayout searchRow = row();
+    if (compact) {
+      searchRow.addView(search, new LinearLayout.LayoutParams(0, -2, 1));
+      root.addView(searchRow);
+    } else root.addView(search);
     search.addTextChangedListener(
         new TextWatcher() {
           public void beforeTextChanged(CharSequence s, int a, int c, int f) {}
@@ -369,62 +418,100 @@ public final class MainActivity extends Activity {
             visibleLimit = 200;
             scrollPosition = 0;
             renderList();
+            itemScroll.scrollTo(0, 0);
           }
 
           public void afterTextChanged(Editable e) {}
         });
     LinearLayout tools = row();
-    Button add = new Button(this);
-    add.setText(tab == 1 ? "All unreturned" : showArchived ? "Archived items" : "+ Register item");
-    add.setAllCaps(false);
-    add.setTextColor(tab == 0 && !showArchived ? Color.WHITE : NAVY);
-    add.setBackground(shape(tab == 0 && !showArchived ? NAVY : 0xffeaf0f7));
-    tools.addView(add, new LinearLayout.LayoutParams(0, dp(48), 1));
-    add.setOnClickListener(
-        v -> {
-          if (tab == 0 && !showArchived) edit(null, "");
-          else {
-            query = "";
-            search.setText("");
-          }
-        });
-    root.addView(tools);
+    Button filterButton =
+        button(compact ? searchRow : tools, filterName() + " ▾", this::chooseFilter, false);
+    LinearLayout.LayoutParams fp =
+        compact
+            ? new LinearLayout.LayoutParams(dp(176), -2)
+            : new LinearLayout.LayoutParams(0, -2, 1);
+    fp.setMargins(compact ? dp(8) : 0, dp(8), compact ? 0 : dp(8), dp(8));
+    filterButton.setLayoutParams(fp);
+    if (!compact) {
+      Button scanButton = button(tools, "Scan label", this::scan, true);
+      scanButton.setLayoutParams(new LinearLayout.LayoutParams(0, -2, 1));
+      root.addView(tools);
+    }
     ScrollView scroll = new ScrollView(this);
     itemScroll = scroll;
     scroll.setFillViewport(true);
     list = column();
     scroll.addView(list);
     root.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1));
+    if (!compact && tab == 0 && !showArchived)
+      button(root, "+ Register item", () -> edit(null, ""), true);
     LinearLayout nav = row();
-    for (String name : new String[] {"Items", "Scan", "Unreturned"}) {
-      Button b = new Button(this);
-      b.setAllCaps(false);
-      b.setText(name);
-      boolean scanAction = name.equals("Scan");
-      boolean selected = name.equals(tab == 0 ? "Items" : "Unreturned");
-      b.setTextColor(scanAction ? Color.WHITE : NAVY);
-      b.setBackground(shape(scanAction ? NAVY : selected ? 0xffeaf0f7 : Color.WHITE));
-      b.setTextSize(14);
-      LinearLayout.LayoutParams navParams = new LinearLayout.LayoutParams(0, dp(52), 1);
-      navParams.setMargins(dp(2), dp(6), dp(2), dp(6));
-      nav.addView(b, navParams);
-      b.setOnClickListener(
-          v -> {
-            if (name.equals("Scan")) scan();
-            else {
-              tab = name.equals("Items") ? 0 : 1;
-              showArchived = false;
-              query = "";
-              visibleLimit = 200;
-              scrollPosition = 0;
-              itemScroll = null;
-              home();
-            }
-          });
+    for (int n = 0; n < 2; n++) {
+      final int destination = n;
+      Button navButton =
+          button(nav, n == 0 ? "Items" : "Unreturned", () -> switchTab(destination), false);
+      navButton.setSelected(tab == n);
+      navButton.setTypeface(null, tab == n ? Typeface.BOLD : Typeface.NORMAL);
+      navButton.setBackground(shape(tab == n ? 0xffdce7f5 : Color.WHITE));
+      navButton.setContentDescription(
+          (n == 0 ? "Items" : "Unreturned") + (tab == n ? ", selected" : ""));
+      LinearLayout.LayoutParams np = new LinearLayout.LayoutParams(0, -2, 1);
+      np.setMargins(dp(2), dp(4), dp(2), dp(4));
+      navButton.setLayoutParams(np);
     }
     root.addView(nav);
     renderList();
     scroll.post(() -> scroll.scrollTo(0, scrollPosition));
+  }
+
+  void switchTab(int destination) {
+    if (tab == destination && !showArchived) return;
+    tab = destination;
+    showArchived = false;
+    query = "";
+    filter = 0;
+    resetList();
+    home();
+  }
+
+  void resetList() {
+    visibleLimit = 200;
+    scrollPosition = 0;
+    itemScroll = null;
+  }
+
+  String[] filterNames() {
+    return tab == 1
+        ? new String[] {"All unreturned", "Overdue", "Due today"}
+        : new String[] {"All items", "Available", "Issued", "Low stock", "On hold"};
+  }
+
+  String filterName() {
+    String[] names = filterNames();
+    return names[filter >= 0 && filter < names.length ? filter : 0];
+  }
+
+  void chooseFilter() {
+    new SafeDialog(this)
+        .setTitle("Filter " + (tab == 1 ? "unreturned" : "items"))
+        .setSingleChoiceItems(
+            filterNames(),
+            filter,
+            (d, choice) -> {
+              filter = choice;
+              resetList();
+              d.dismiss();
+              home();
+            })
+        .setNegativeButton("Cancel", null)
+        .show();
+  }
+
+  Map<String, Integer> outstandingByItem() {
+    Map<String, Integer> balances = new HashMap<>();
+    for (Model.Loan loan : model.loans)
+      balances.merge(loan.itemId, loan.quantity - loan.returned, Integer::sum);
+    return balances;
   }
 
   void renderList() {
@@ -433,14 +520,21 @@ public final class MainActivity extends Activity {
     String q = query.toLowerCase(Locale.ROOT).trim();
     int count = 0;
     if (tab == 0) {
+      Map<String, Integer> balances = outstandingByItem();
       for (Model.Item i : model.items) {
         if (i.archived != showArchived
             || !(i.name + " " + i.id + " " + i.code + " " + i.location)
                 .toLowerCase(Locale.ROOT)
                 .contains(q)) continue;
-        int out = model.outstanding(i.id), avail = model.available(i.id);
+        int out = balances.getOrDefault(i.id, 0), avail = i.total - out;
+        if ((filter == 1 && (avail <= 0 || !i.status.equals("Available")))
+            || (filter == 2 && out == 0)
+            || (filter == 3 && (!i.category.equals("Material") || avail > i.minimum))
+            || (filter == 4 && i.status.equals("Available"))) continue;
         LinearLayout card = card();
-        card.addView(label(i.name, 18, INK));
+        TextView itemTitle = label(i.name, 18, INK);
+        itemTitle.setTypeface(null, Typeface.BOLD);
+        card.addView(itemTitle);
         card.addView(label(i.id + " · " + i.category, 13, MUTED));
         String stat =
             !i.status.equals("Available") ? i.status : out > 0 ? out + " issued" : "Available";
@@ -449,31 +543,64 @@ public final class MainActivity extends Activity {
                 stat
                     + "   ·   "
                     + avail
-                    + " available"
+                    + (i.status.equals("Available") && !i.archived ? " available" : " on hand")
                     + (i.category.equals("Material") && avail <= i.minimum
                         ? "   ·   Low stock"
                         : ""),
                 14,
-                NAVY));
+                !i.status.equals("Available")
+                        || (i.category.equals("Material") && avail <= i.minimum)
+                    ? 0xff914323
+                    : NAVY));
         if (!i.location.isEmpty()) card.addView(label(i.location, 13, MUTED));
-        card.setContentDescription(i.name + ", " + stat + ", " + avail + " available");
+        card.setContentDescription(
+            i.name
+                + ", "
+                + stat
+                + ", "
+                + avail
+                + (i.status.equals("Available") && !i.archived ? " available" : " on hand")
+                + (i.category.equals("Material") && avail <= i.minimum ? ", low stock" : "")
+                + ", "
+                + i.id
+                + ", "
+                + i.category
+                + (i.location.isEmpty() ? "" : ", " + i.location));
         card.setOnClickListener(v -> details(i.id));
         count++;
         if (count >= visibleLimit) break;
       }
     } else {
+      Map<String, Model.Item> itemsById = new HashMap<>();
+      for (Model.Item item : model.items) itemsById.put(item.id, item);
       ArrayList<Model.Loan> loans = new ArrayList<>(model.loans);
       loans.sort(Comparator.comparing(l -> l.due));
       for (Model.Loan l : loans) {
         if (l.quantity == l.returned) continue;
-        Model.Item i = model.item(l.itemId);
-        if (!(i.name + " " + i.id + " " + l.borrower).toLowerCase(Locale.ROOT).contains(q))
-          continue;
+        LocalDate dueDate = LocalDate.parse(l.due);
+        if ((filter == 1 && !dueDate.isBefore(LocalDate.now()))
+            || (filter == 2 && !dueDate.equals(LocalDate.now()))) continue;
+        Model.Item i = itemsById.get(l.itemId);
+        if (!(i.name + " " + i.id + " " + i.code + " " + l.borrower)
+            .toLowerCase(Locale.ROOT)
+            .contains(q)) continue;
         LinearLayout c = card();
         c.addView(label(i.name, 18, INK));
+        c.addView(label(i.id + " · " + i.category, 13, MUTED));
         c.addView(label(l.borrower + " · " + (l.quantity - l.returned) + " to return", 15, NAVY));
         boolean late = LocalDate.parse(l.due).isBefore(LocalDate.now());
         c.addView(label((late ? "Overdue · " : "Due · ") + l.due, 13, late ? 0xffa63e29 : MUTED));
+        c.addView(label("Record return →", 14, NAVY));
+        c.setContentDescription(
+            i.name
+                + ", "
+                + l.borrower
+                + ", "
+                + (l.quantity - l.returned)
+                + " to return, "
+                + (late ? "overdue " : "due ")
+                + l.due
+                + ". Record return");
         c.setOnClickListener(v -> returnForm(l.id));
         count++;
         if (count >= visibleLimit) break;
@@ -493,16 +620,22 @@ public final class MainActivity extends Activity {
     if (count == 0) {
       list.addView(
           label(
-              q.isEmpty()
-                  ? (tab == 1 ? "Everything returned" : "Your inventory starts here")
-                  : "No matching records",
+              !q.isEmpty() || filter != 0
+                  ? "No matching records"
+                  : showArchived
+                      ? "No archived items"
+                      : tab == 1 ? "Everything returned" : "Your inventory starts here",
               21,
               INK));
       list.addView(
           label(
-              tab == 1
-                  ? "Issued items stay here until fully returned."
-                  : "Scan a label or tap Register item. You can also type the ID.",
+              !q.isEmpty() || filter != 0
+                  ? "Try another search or choose a different filter."
+                  : showArchived
+                      ? "Archived items keep their IDs and history."
+                      : tab == 1
+                          ? "Issued items stay here until fully returned."
+                          : "Scan a label or tap Register item. You can also type the ID.",
               15,
               MUTED));
     }
@@ -511,7 +644,14 @@ public final class MainActivity extends Activity {
   LinearLayout card() {
     LinearLayout c = column();
     c.setPadding(dp(16), dp(10), dp(16), dp(10));
-    c.setBackground(shape(Color.WHITE));
+    c.setBackground(
+        new android.graphics.drawable.RippleDrawable(
+            android.content.res.ColorStateList.valueOf(0xffdce7f5),
+            shape(Color.WHITE),
+            shape(Color.WHITE)));
+    c.setFocusable(true);
+    c.setClickable(true);
+    c.setMinimumHeight(dp(64));
     LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(-1, -2);
     p.setMargins(0, dp(4), 0, dp(6));
     list.addView(c, p);
@@ -525,8 +665,12 @@ public final class MainActivity extends Activity {
   }
 
   EditText field(LinearLayout b, String caption, String value, boolean number) {
-    b.addView(label(caption, 13, MUTED));
+    TextView captionView = label(caption, 13, MUTED);
+    b.addView(captionView);
     EditText e = new EditText(this);
+    e.setId(View.generateViewId());
+    captionView.setLabelFor(e.getId());
+    e.setMinHeight(dp(48));
     e.setTextSize(16);
     e.setText(value);
     e.setInputType(
@@ -543,6 +687,7 @@ public final class MainActivity extends Activity {
   Spinner select(LinearLayout b, String caption, String[] values, String selected) {
     b.addView(label(caption, 13, MUTED));
     Spinner s = new Spinner(this);
+    s.setContentDescription(caption);
     s.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, values));
     for (int n = 0; n < values.length; n++) if (values[n].equals(selected)) s.setSelection(n);
     b.addView(s, new LinearLayout.LayoutParams(-1, dp(48)));
@@ -553,9 +698,23 @@ public final class MainActivity extends Activity {
     ScrollView s = new ScrollView(this);
     s.addView(form);
     AlertDialog a =
-        new SafeDialog(this).setTitle(title).setView(s).setNegativeButton("Cancel", null).create();
+        new SafeDialog(this)
+            .setTitle(title)
+            .setView(s)
+            .setNegativeButton("Cancel", null)
+            .setPositiveButton("Save", null)
+            .create();
     a.show();
     dialogs.add(a);
+    formDialogs.put(form, a);
+    a.getButton(AlertDialog.BUTTON_POSITIVE).setVisibility(View.GONE);
+    a.getButton(AlertDialog.BUTTON_NEGATIVE).setMinHeight(dp(48));
+    a.getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);
+    a.setOnDismissListener(
+        x -> {
+          dialogs.remove(a);
+          formDialogs.remove(form);
+        });
     return a;
   }
 
@@ -610,6 +769,25 @@ public final class MainActivity extends Activity {
     EditText qty =
         field(f, "Total owned quantity (one per tool/equipment)", "" + original.total, true);
     EditText minimum = field(f, "Low stock at", "" + original.minimum, true);
+    TextView qtyCaption = (TextView) f.getChildAt(f.indexOfChild(qty) - 1);
+    TextView minimumCaption = (TextView) f.getChildAt(f.indexOfChild(minimum) - 1);
+    category.setOnItemSelectedListener(
+        new AdapterView.OnItemSelectedListener() {
+          public void onNothingSelected(AdapterView<?> parent) {}
+
+          public void onItemSelected(AdapterView<?> parent, View view, int position, long rowId) {
+            boolean material = category.getSelectedItem().toString().equals("Material");
+            qty.setEnabled(material);
+            qtyCaption.setText(
+                material ? "Total owned quantity" : "One individually labelled asset");
+            minimum.setVisibility(material ? View.VISIBLE : View.GONE);
+            minimumCaption.setVisibility(material ? View.VISIBLE : View.GONE);
+            if (!material) {
+              qty.setText("1");
+              minimum.setText("0");
+            }
+          }
+        });
     Spinner status =
         select(
             f,
@@ -658,19 +836,37 @@ public final class MainActivity extends Activity {
     f.addView(label(i.id + " · " + i.category, 14, MUTED));
     f.addView(label("Scan code: " + i.code, 14, MUTED));
     f.addView(
-        label(model.available(id) + " available · " + model.outstanding(id) + " issued", 18, NAVY));
+        label(
+            model.available(id)
+                + (i.status.equals("Available") && !i.archived ? " available · " : " on hand · ")
+                + model.outstanding(id)
+                + " issued",
+            18,
+            NAVY));
     f.addView(label(i.status + (i.location.isEmpty() ? "" : " · " + i.location), 15, INK));
     if (!i.notes.isEmpty()) f.addView(label(i.notes, 15, MUTED));
     AlertDialog d = dialog(i.name, f);
+    d.getButton(AlertDialog.BUTTON_NEGATIVE).setText(android.R.string.ok);
     if (!i.archived) {
-      button(
-          f,
-          "Issue",
-          () -> {
-            d.dismiss();
-            issueForm(id);
-          },
-          true);
+      boolean canIssue = i.status.equals("Available") && model.available(id) > 0;
+      if (!canIssue)
+        f.addView(
+            label(
+                !i.status.equals("Available")
+                    ? "Issuing paused: " + i.status + ". Review status in Edit."
+                    : "All units are issued. Record a return before issuing again.",
+                14,
+                MUTED));
+      Button issueAction =
+          button(
+              f,
+              "Issue",
+              () -> {
+                d.dismiss();
+                issueForm(id);
+              },
+              true);
+      issueAction.setEnabled(canIssue);
       button(
           f,
           "Edit",
@@ -700,16 +896,19 @@ public final class MainActivity extends Activity {
         false);
     button(
         f,
-        i.archived ? "Restore item" : "Delete item",
+        i.archived ? "Restore item" : "Archive item",
         () ->
             new SafeDialog(this)
-                .setTitle(i.archived ? "Restore this item?" : "Delete this item?")
+                .setTitle(i.archived ? "Restore this item?" : "Archive this item?")
                 .setMessage(
-                    "The record and its issue/return history will be retained in Archived items."
-                        + " Items still issued must be returned first.")
+                    i.archived
+                        ? "This item will reappear in active inventory with its existing ID and"
+                            + " history."
+                        : "This hides the item from active inventory and keeps its ID and history."
+                            + " Items still issued must be returned first.")
                 .setNegativeButton("Cancel", null)
                 .setPositiveButton(
-                    i.archived ? "Restore" : "Delete",
+                    i.archived ? "Restore" : "Archive",
                     (x, w) -> mutate("Updating item", m -> m.archive(id, !i.archived), d))
                 .show(),
         false);
@@ -742,10 +941,25 @@ public final class MainActivity extends Activity {
                   now.getYear(),
                   now.getMonthValue() - 1,
                   now.getDayOfMonth());
+          picker
+              .getDatePicker()
+              .setMinDate(
+                  LocalDate.now().atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli());
           picker.show();
           dialogs.add(picker);
         });
-    consumed.setOnCheckedChangeListener((v, on) -> due.setEnabled(!on));
+    TextView consumptionHelp =
+        label("Borrowed stock must be returned by the selected date.", 13, MUTED);
+    f.addView(consumptionHelp);
+    consumed.setMinHeight(dp(48));
+    consumed.setOnCheckedChangeListener(
+        (v, on) -> {
+          due.setVisibility(on ? View.GONE : View.VISIBLE);
+          consumptionHelp.setText(
+              on
+                  ? "Consumed stock reduces total owned quantity. No return is expected."
+                  : "Borrowed stock must be returned by the selected date.");
+        });
     EditText note = field(f, "Notes", "", false);
     AlertDialog d = dialog("Issue item", f);
     button(
@@ -808,7 +1022,7 @@ public final class MainActivity extends Activity {
       }
     }
     f.addView(label("Latest 100 entries. Export history for the complete log.", 13, MUTED));
-    dialog("Item history", f);
+    dialog("Item history", f).getButton(AlertDialog.BUTTON_NEGATIVE).setText(android.R.string.ok);
   }
 
   void scan() {
@@ -841,14 +1055,9 @@ public final class MainActivity extends Activity {
 
   void dataMenu() {
     String[] options = {
-      "Export inventory CSV",
-      "Export issues CSV",
-      "Export audit history CSV",
+      "Export CSV reports",
       "Import new items CSV",
-      "Create encrypted backup",
-      "Restore encrypted backup",
-      "Recover previous save",
-      "Recover before last restore",
+      "Backup & recovery",
       showArchived ? "Show active items" : "Show archived items",
       "Lock Inventory",
       "About"
@@ -859,28 +1068,32 @@ public final class MainActivity extends Activity {
             options,
             (d, n) -> {
               switch (n) {
-                case 0 -> prepareCsv(0);
-                case 1 -> prepareCsv(1);
-                case 2 -> prepareCsv(2);
-                case 3 -> openDocument(READ_CSV);
-                case 4 -> password(true, null);
-                case 5 -> openDocument(READ_BACKUP);
-                case 6 -> recover(false);
-                case 7 -> recover(true);
-                case 8 -> {
+                case 0 ->
+                    new SafeDialog(this)
+                        .setTitle("Export CSV report")
+                        .setItems(
+                            new String[] {"Inventory", "Issues & returns", "Audit history"},
+                            (x, choice) -> prepareCsv(choice))
+                        .setNegativeButton("Cancel", null)
+                        .show();
+                case 1 -> openDocument(READ_CSV);
+                case 2 -> backupMenu();
+                case 3 -> {
                   showArchived = !showArchived;
                   tab = 0;
                   query = "";
+                  filter = 0;
+                  resetList();
                   home();
                 }
-                case 9 -> {
+                case 4 -> {
                   unlocked = false;
                   locked();
                   authenticate();
                 }
-                case 10 ->
+                case 5 ->
                     new SafeDialog(this)
-                        .setTitle("Inventory 0.2.0-rc.1")
+                        .setTitle("Inventory " + BuildConfig.VERSION_NAME)
                         .setMessage(
                             "Offline Android test candidate.\n\n"
                                 + "Phone-camera barcode and QR scanning. No account or internet"
@@ -894,6 +1107,28 @@ public final class MainActivity extends Activity {
                         .show();
               }
             })
+        .show();
+  }
+
+  void backupMenu() {
+    new SafeDialog(this)
+        .setTitle("Backup & recovery")
+        .setItems(
+            new String[] {
+              "Create encrypted backup",
+              "Restore encrypted backup",
+              "Recover previous save",
+              "Recover before last restore"
+            },
+            (d, n) -> {
+              switch (n) {
+                case 0 -> password(true, null);
+                case 1 -> openDocument(READ_BACKUP);
+                case 2 -> recover(false);
+                case 3 -> recover(true);
+              }
+            })
+        .setNegativeButton("Cancel", null)
         .show();
   }
 
@@ -1035,6 +1270,7 @@ public final class MainActivity extends Activity {
                     () -> {
                       model = storage.snapshot();
                       showArchived = false;
+                      filter = 0;
                       query = "";
                       visibleLimit = 200;
                       scrollPosition = 0;

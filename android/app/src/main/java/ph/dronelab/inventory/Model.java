@@ -193,7 +193,7 @@ public final class Model {
 
   public void archive(String id, boolean value) {
     Item i = item(id);
-    check(outstanding(id) == 0, "Return all issued quantities before deleting this item");
+    check(outstanding(id) == 0, "Return all issued quantities before archiving this item");
     i.archived = value;
     audit(id, value ? "ARCHIVE" : "RESTORE", i.name);
   }

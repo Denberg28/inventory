@@ -21,6 +21,15 @@ Run `./gradlew testDebugUnitTest assembleDebug lintDebug` on the final source.
   rollback and pre-restore recovery (Robolectric simulation with a test key).
 - Phone layout, scanned existing/new label paths, unreturned filtering and dialog cleanup.
 
+## UI revision acceptance
+
+Filters must not alter inventory/custody; today and overdue must not overlap. Search
+by code must work in Unreturned. Unavailable Issue must be disabled with an explanation;
+return/edit remain accessible. Primary form actions stay outside scrolling content.
+Dismissal/lock clears dialog registries. Tab reselection keeps search; switching views
+clears view-specific filters. Review portrait, landscape, 130% text and register dialog
+renders; physical TalkBack/keyboard remain device checks. See `UI_REVIEW.md`.
+
 ## Physical Android checks — NOT TESTED
 
 Record phone model, Android version, APK SHA-256 and observations.

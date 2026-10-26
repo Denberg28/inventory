@@ -1,1 +1,1 @@
-No issues found.
+Final Android lint: debug and release each 0 errors / 0 warnings.

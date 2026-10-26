@@ -4,7 +4,7 @@ import pathlib
 import zipfile
 
 root = pathlib.Path(__file__).resolve().parents[1]
-output = root.parent / 'deliverables' / 'Inventory-Android-v0.2.0-rc.1-Source-Build-Kit.zip'
+output = root.parent / 'deliverables' / 'Inventory-Android-v0.2.0-rc.2-Source-Build-Kit.zip'
 output.parent.mkdir(exist_ok=True)
 exclude = {'.git', '.gradle', 'build', '__pycache__'}
 with zipfile.ZipFile(output, 'w', zipfile.ZIP_DEFLATED) as archive:
@@ -16,7 +16,7 @@ with zipfile.ZipFile(output, 'w', zipfile.ZIP_DEFLATED) as archive:
             continue
         if path.suffix in {'.jks', '.keystore', '.enc', '.dlinv', '.apk'}:
             raise RuntimeError(f'Unexpected sensitive/binary artifact in source: {rel}')
-        archive.write(path, pathlib.Path(root.name) / rel)
+        archive.write(path, pathlib.Path('Inventory-Android') / rel)
 with zipfile.ZipFile(output) as archive:
     assert archive.testzip() is None
     names = archive.namelist()
