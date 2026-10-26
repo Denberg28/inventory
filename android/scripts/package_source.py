@@ -1,10 +1,12 @@
 """Create a source-only kit; never include local state, caches, SDKs or signing keys."""
 import hashlib
 import pathlib
+import re
 import zipfile
 
 root = pathlib.Path(__file__).resolve().parents[1]
-output = root.parent / 'deliverables' / 'Inventory-Android-v0.2.0-rc.2-Source-Build-Kit.zip'
+version = re.search(r"versionName '([^']+)'", (root / 'app/build.gradle').read_text()).group(1)
+output = root.parent / 'deliverables' / f'Inventory-Android-v{version}-Source-Build-Kit.zip'
 output.parent.mkdir(exist_ok=True)
 exclude = {'.git', '.gradle', 'build', '__pycache__'}
 with zipfile.ZipFile(output, 'w', zipfile.ZIP_DEFLATED) as archive:

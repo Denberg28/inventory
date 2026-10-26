@@ -1,5 +1,12 @@
 # Candidate limits
 
+- rc.3 lint reports two low-severity warnings in each variant: the pinned target SDK 35
+  is older than current lint metadata, and the live numeric summary triggers the plural
+  heuristic. No checks are suppressed; see VERIFICATION.md.
+
+- rc.3 APK publication is BLOCKED: rc.2 Preview signing material is not available.
+  CI-generated debug keys do not preserve installed-app upgrade compatibility. See RELEASE.md.
+
 - rc.2 debug builds install as Inventory Preview, with an independent package/data store.
   The original rc.1 app stays installed. Preview changes do not synchronize back. The
   local test signer differs from rc.1; in-place upgrades require the original signer.
@@ -19,5 +26,5 @@
   document; retry it. Local inventory is not changed by an export failure.
 - Whole-state encrypted saves are intended for a small lab. Hard record/file caps are
   enforced. There is no automatic history pruning, warehouse-scale performance validation,
-  printing of labels, loan editing/deletion, or notification scheduler.
+  printing of labels, borrower/quantity editing or loan deletion, or notification scheduler.
 - Debug-signed candidate. Stable signing continuity and distribution are future gates.

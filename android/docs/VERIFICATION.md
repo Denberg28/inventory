@@ -1,3 +1,39 @@
+# Verification — 0.2.0-rc.3 development
+
+27 October 2026, Asia/Manila. Tested application source:
+`26c615e1277d715fd6034aeb4f034fed1ad9c4ab`.
+
+**PASS:** 48 Android tests, zero failures/errors/skipped; debug and unsigned release
+builds; debug/release lint (zero errors, two warnings each). Android CI:
+https://github.com/Denberg28/inventory/actions/runs/40386393722.
+Windows software, Linux GUI simulation and Windows candidate build also pass:
+https://github.com/Denberg28/inventory/actions/runs/40386393806.
+Local source checks and 36 Windows core tests pass. Local Android dependency bootstrap
+is blocked by restricted network access; it is not the source of Android build evidence.
+
+Lint warnings are retained: `OldTargetApi` for the required pinned target SDK 35, and
+heuristic `PluralsCandidate` for a numeric English summary with no inflected noun.
+No checks were suppressed. A target-SDK migration needs separate compatibility testing.
+
+Self-review/simulation covers due-date history, invalid/stale/completed-loan rejection,
+partial custody, encrypted persistence/recovery, CSV/backup compatibility, live return
+summary/cancel, picker cleanup and baseline regressions. The source-kit files were
+compared with the local source (apart from a subsequent documentation-only correction).
+The downloaded CI archive checksum was verified. Fictitious return/date renders were
+visually reviewed at 360 px width. See `evidence/rc3/` and `../DELIVERY.json` for the
+exact run, tests, asset hashes, source fingerprint and limits. Later documentation and
+evidence commits do not change application/test/build source.
+
+**BLOCKED:** compatible installable APK publication. The rc.2 Preview key is unavailable;
+the debug APK uses an ephemeral CI key, and the release variant is unsigned. Neither
+is a compatible update. Keep the installed app/data and previous published releases.
+No rc.3 GitHub Release or stable readiness is claimed. Physical camera, credentials,
+Keystore, providers, accessibility, power loss and installation/upgrade are NOT TESTED.
+
+The following section and older evidence paths document rc.2 only.
+
+---
+
 # Verification — 0.2.0-rc.2
 
 26 October 2026. Tier: controlled Android test candidate. Baseline commit:

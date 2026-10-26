@@ -928,26 +928,11 @@ public final class MainActivity extends Activity {
     due.setText(getString(R.string.return_by, date[0]));
     due.setAllCaps(false);
     f.addView(due);
-    due.setOnClickListener(
-        v -> {
-          LocalDate now = LocalDate.parse(date[0]);
-          DatePickerDialog picker =
-              new DatePickerDialog(
-                  this,
-                  (p, y, m, d) -> {
-                    date[0] = LocalDate.of(y, m + 1, d).toString();
-                    due.setText(getString(R.string.return_by, date[0]));
-                  },
-                  now.getYear(),
-                  now.getMonthValue() - 1,
-                  now.getDayOfMonth());
-          picker
-              .getDatePicker()
-              .setMinDate(
-                  LocalDate.now().atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli());
-          picker.show();
-          dialogs.add(picker);
-        });
+    due.setMinHeight(dp(48));
+    due.setOnClickListener(v -> chooseReturnDate(date[0], selected -> {
+      date[0] = selected;
+      due.setText(getString(R.string.return_by, date[0]));
+    }));
     TextView consumptionHelp =
         label("Borrowed stock must be returned by the selected date.", 13, MUTED);
     f.addView(consumptionHelp);
@@ -983,6 +968,9 @@ public final class MainActivity extends Activity {
     LinearLayout f = form();
     f.addView(label(model.item(l.itemId).name, 19, INK));
     f.addView(label(l.borrower + " · Due " + l.due, 15, MUTED));
+    f.addView(label("Issued " + Instant.parse(l.issued).atZone(ZoneId.systemDefault()).toLocalDate(),
+        13, MUTED));
+    if (!l.note.isEmpty()) f.addView(label(l.note, 14, MUTED));
     f.addView(label((l.quantity - l.returned) + " outstanding", 18, NAVY));
     EditText qty = field(f, "Quantity returned", "" + (l.quantity - l.returned), true);
     Spinner condition =
@@ -992,22 +980,105 @@ public final class MainActivity extends Activity {
             new String[] {"Available", "Damaged", "Maintenance"},
             "Available");
     EditText note = field(f, "Notes", "", false);
-    f.addView(
-        label("A damaged return places this entire item/lot on hold until reviewed.", 13, MUTED));
+    TextView summary = label("", 14, NAVY);
+    summary.setTag("return-summary");
+    summary.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
+    f.addView(summary);
+    Runnable updateSummary = () -> {
+      try {
+        int n = number(qty);
+        model.validateReturn(loanId, n, condition.getSelectedItem().toString(), "");
+        boolean hold = !condition.getSelectedItem().toString().equals("Available");
+        summary.setText(getString(R.string.return_summary, n, l.quantity - l.returned - n,
+            hold ? getString(R.string.return_hold_warning) : ""));
+        summary.setTextColor(hold ? 0xff914323 : NAVY);
+      } catch (IllegalArgumentException ex) {
+        summary.setText(getString(R.string.return_quantity_range, l.quantity - l.returned));
+        summary.setTextColor(0xff914323);
+      }
+    };
+    qty.addTextChangedListener(new TextWatcher() {
+      public void beforeTextChanged(CharSequence value, int start, int count, int after) {}
+      public void onTextChanged(CharSequence value, int start, int before, int count) {
+        updateSummary.run();
+      }
+      public void afterTextChanged(Editable value) {}
+    });
+    condition.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
+      public void onItemSelected(android.widget.AdapterView<?> parent, View view, int position, long id) {
+        updateSummary.run();
+      }
+      public void onNothingSelected(android.widget.AdapterView<?> parent) {}
+    });
+    updateSummary.run();
     AlertDialog d = dialog("Record return", f);
+    button(f, "Change return date", () -> {
+      d.dismiss();
+      rescheduleForm(loanId);
+    }, false);
     button(
         f,
-        "Confirm return",
+        "Record return",
         () -> {
           try {
             int n = number(qty);
             String c = condition.getSelectedItem().toString(), nt = val(note);
+            model.validateReturn(loanId, n, c, nt);
             mutate("Recording return", m -> m.receive(loanId, n, c, nt), d);
           } catch (Exception ex) {
             error(ex);
           }
         },
         true);
+  }
+
+  void chooseReturnDate(String current, java.util.function.Consumer<String> selected) {
+    LocalDate today = LocalDate.now();
+    LocalDate initial = LocalDate.parse(current);
+    if (initial.isBefore(today)) initial = today;
+    DatePickerDialog picker = new DatePickerDialog(this,
+        (view, year, month, day) -> selected.accept(LocalDate.of(year, month + 1, day).toString()),
+        initial.getYear(), initial.getMonthValue() - 1, initial.getDayOfMonth());
+    picker.getDatePicker().setMinDate(
+        today.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli());
+    picker.show();
+    dialogs.add(picker);
+    picker.setOnDismissListener(dialog -> dialogs.remove(picker));
+  }
+
+  void rescheduleForm(String loanId) {
+    Model.Loan loan = model.loan(loanId);
+    LinearLayout f = form();
+    f.addView(label(model.item(loan.itemId).name, 19, INK));
+    f.addView(label(loan.borrower + " · Current due " + loan.due, 15, MUTED));
+    final String[] date = {loan.due};
+    Button due = button(f, getString(R.string.return_by, date[0]), () -> {}, false);
+    due.setOnClickListener(view -> {
+      if (!busy) chooseReturnDate(date[0], selected -> {
+        date[0] = selected;
+        due.setText(getString(R.string.return_by, selected));
+      });
+    });
+    EditText reason = field(f, "Reason for date change", "", false);
+    f.addView(label("The old date and reason stay in item history. Stock and borrower stay the same.",
+        13, MUTED));
+    AlertDialog d = dialog("Change return date", f);
+    button(f, "Review date change", () -> {
+      try {
+        String next = date[0], explanation = val(reason), previous = loan.due;
+        model.validateReschedule(loanId, previous, next, explanation);
+        new SafeDialog(this)
+            .setTitle("Change return date?")
+            .setMessage(loan.borrower + "\n" + previous + " → " + next + "\nReason: " + explanation)
+            .setNegativeButton("Back", null)
+            .setPositiveButton("Save date", (confirm, which) ->
+                mutate("Updating return date",
+                    m -> m.reschedule(loanId, previous, next, explanation), d))
+            .show();
+      } catch (Exception ex) {
+        error(ex);
+      }
+    }, true);
   }
 
   void history(String id) {

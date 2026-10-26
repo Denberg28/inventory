@@ -1,3 +1,15 @@
+# 0.2.0-rc.3 — development, 27 October 2026 (Asia/Manila)
+
+- Audited due-date changes for open issues, with mandatory reason, stale-date rejection
+  and no change to original issue time, borrower, quantities or return history.
+- Return form displays original issue date/notes and a live remaining-balance summary;
+  held-condition warning updates with the selection. Routine returns keep one save action.
+- Return forms show original issue date and issue notes.
+- Date pickers remove dismissed dialog references and open overdue dates at today.
+- Source-kit filenames follow the configured app version; CI builds/lints both variants.
+- No schema/dependency change. APK publication is blocked by unavailable rc.2 signing
+  material; CI debug APKs are temporary test builds, not compatible app updates.
+
 # Changes
 
 ## 0.2.0-rc.2 — 26 October 2026

@@ -6,7 +6,7 @@ checks below. Never treat source review or simulation as hardware validation.
 
 ## Automated acceptance
 
-Run `./gradlew testDebugUnitTest assembleDebug lintDebug` on the final source.
+Run `./gradlew testDebugUnitTest assembleDebug assembleRelease lintDebug lintRelease` on the final source.
 
 - Register unique inventory, preserve zeros, reject duplicate/ambiguous IDs/codes.
 - Tools/equipment are individual records; material quantities may be borrowed or consumed.
@@ -69,3 +69,12 @@ Record phone model, Android version, APK SHA-256 and observations.
 The camera, device credential, Keystore and native document-provider checks are required
 before promotion to stable. A successful APK build does not prove those paths work on
 physical phones. No Windows executable or external barcode gun is required by this APK.
+
+## rc.3 loan follow-up
+
+See `FOLLOW_UP.md` for measurable acceptance and the device procedure. Required automated
+coverage includes audited due-date changes, partial-custody preservation, past/unchanged/
+stale/completed-loan rejection, encrypted persistence/recovery, CSV/backup compatibility,
+live return summary and cancellation and invalid quantity handling. APK distribution additionally
+requires the existing rc.2 Preview signer; never promote an ephemeral CI debug APK as
+a compatible upgrade. Earlier screenshots and evidence are labeled rc.2 only.

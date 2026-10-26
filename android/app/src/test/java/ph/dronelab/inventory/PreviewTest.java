@@ -39,6 +39,7 @@ public class PreviewTest {
         "Practical session",
         false);
     a.model.loans.get(0).due = java.time.LocalDate.now().minusDays(1).toString();
+    a.model.loans.get(0).issued = java.time.Instant.now().minus(8, java.time.temporal.ChronoUnit.DAYS).toString();
     a.model.issue(
         "DL-003",
         95,
@@ -51,6 +52,18 @@ public class PreviewTest {
     a.tab = 1;
     a.home();
     capture(a, "unreturned");
+    a.returnForm(a.model.loans.get(0).id);
+    android.app.AlertDialog returnDialog =
+        org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();
+    org.robolectric.shadows.ShadowLooper.runUiThreadTasksIncludingDelayedTasks();
+    captureView(returnDialog.getWindow().getDecorView(), "return-dialog", 360, 640);
+    returnDialog.dismiss();
+    a.rescheduleForm(a.model.loans.get(0).id);
+    android.app.AlertDialog reschedule =
+        org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();
+    org.robolectric.shadows.ShadowLooper.runUiThreadTasksIncludingDelayedTasks();
+    captureView(reschedule.getWindow().getDecorView(), "reschedule-dialog", 360, 580);
+    reschedule.dismiss();
     a.tab = 0;
     a.home();
     a.edit(null, "000123456789");

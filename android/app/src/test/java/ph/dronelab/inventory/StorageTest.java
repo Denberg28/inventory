@@ -34,6 +34,24 @@ public class StorageTest {
   }
 
   @Test
+  public void rescheduledPartialLoanPersistsAndRecoveryRetainsOriginalDueDate() throws Exception {
+    Model initial = new LoanFollowUpTest().openLoan();
+    s.restore(initial);
+    Model.Loan loan = initial.loans.get(0);
+    String next = java.time.LocalDate.now().plusDays(2).toString();
+    s.change(m -> m.reschedule(loan.id, loan.due, next, "Authorized extension"));
+    Storage reopened = new Storage(dir, key);
+    reopened.load();
+    assertEquals(next, reopened.snapshot().loan(loan.id).due);
+    assertEquals(5, reopened.snapshot().outstanding("M1"));
+    assertEquals(loan.due, reopened.recovery(false).loan(loan.id).due);
+    byte[] saved = Files.readAllBytes(s.file.getBaseFile().toPath());
+    assertThrows(IllegalArgumentException.class,
+        () -> s.change(m -> m.reschedule(loan.id, loan.due, next, "Stale request")));
+    assertArrayEquals(saved, Files.readAllBytes(s.file.getBaseFile().toPath()));
+  }
+
+  @Test
   public void persistenceAndRollbackOnRejectedOperation() throws Exception {
     s.change(m -> m.save(tool(), true));
     byte[] before = Files.readAllBytes(s.file.getBaseFile().toPath());

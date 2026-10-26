@@ -1,33 +1,38 @@
-# Inventory Android 0.2.0-rc.2 — test build
+# Inventory Android 0.2.0-rc.3 — development delivery
 
-Prepared from `933e8ec04a14c707f0f08bfa4d08166bd1ecd0ac` (published rc.1 baseline).
-UI/workflow development and the next build were requested on 26 October 2026.
+Baseline: `b7f758d` (main, published rc.2 Preview plus release policy).
+Date: 27 October 2026, Asia/Manila. Schema and encrypted-backup format remain version 1.
+No runtime dependency, package identity or Windows source/data change.
 
-Changes: separate scan action, stock/condition and due-date filters, clearer item/loan
-cards, persistent form actions, individual-asset quantity controls, clearer consumption
-and unavailable-issue behavior, accurate archive/restore labels, grouped data actions,
-and dialog cleanup. No runtime dependency or database schema change. The release package ID is preserved;
-the debug build uses a separate Preview identity for safe testing.
+Changes: audited return-date changes, original issue context and live return summary before
+saving. See `docs/FOLLOW_UP.md` and `docs/TESTING.md`.
 
-See `docs/UI_REVIEW.md`, `docs/VERIFICATION.md` and `DELIVERY.json` for final evidence.
-The source kit contains fictitious preview data only, never user records or signing keys.
-Android and Windows stores remain separate; Windows code/data were not modified.
+## Build and publication
 
-## Installation and rollback
+Required checks: `./gradlew --no-daemon testDebugUnitTest lintDebug lintRelease
+assembleDebug assembleRelease`. CI also produces the matching source kit.
+Local Gradle bootstrap is blocked by restricted network access; GitHub Actions supplies
+build/test evidence. The final application source at `26c615e1277d715fd6034aeb4f034fed1ad9c4ab`
+passes all 48 Android tests, both builds and lint (zero errors, two retained warnings).
+See `docs/VERIFICATION.md` and `DELIVERY.json` for exact-commit results and asset hashes.
+The subsequent evidence/documentation commit does not change application source.
 
-This is a debug-signed **Inventory Preview** app (`ph.dronelab.inventory.preview`).
-It installs beside the published Inventory app (`ph.dronelab.inventory`) with separate
-records and encryption keys. Do not uninstall or clear the working app. An encrypted
-`.dlinv` backup can copy data into Preview for testing. Preview edits are independent;
-there is no synchronization or automatic promotion of its records. CSV is not a complete
-custody/history backup. Test data and a disposable backup copy are recommended.
+APK release is **BLOCKED** until the existing signing material is recovered or the user
+explicitly authorizes a deliberate signing/identity migration. No key is in source.
+Expected published rc.2 Preview certificate SHA-256:
+`df5a504e375d94a473b043c8e903fcee3b3805c9f0cde4c2b5af95c248d67025`.
+The release configuration remains unsigned; the CI debug key is ephemeral. Neither
+an unsigned APK nor a differently signed CI APK is a compatible installable update.
+Do not publish such a binary as an rc.2 upgrade or change package identity implicitly.
 
-The local debug certificate differs from the published rc.1 certificate; it is not an
-in-place upgrade. Production/release identity remains unchanged. A signed upgrade still
-requires the original key or a deliberate migration with a verified encrypted backup.
+## Compatibility and rollback
 
-Schema and encrypted-backup format remain version 1. Cross-version recovery has model
-format compatibility but physical phone migration is NOT TESTED. Keep the original APK
-and external backup for rollback. Production signing continuity and physical-device
-checks remain stable-release gates. Public GitHub publication is not claimed by this
-local build record.
+Preserve the working rc.2 Preview/rc.1 app and verified external `.dlinv` backups.
+Do not uninstall or clear data to work around a certificate mismatch. Once signing is
+available, verify APK certificate, package, version code, source commit and checksum
+before candidate publication and test an in-place upgrade on a disposable phone.
+
+No downgrade installation is promised. Use the preserved APK/data or a verified backup
+on a deliberate, compatible installation for rollback. Physical camera, credentials,
+Keystore, file providers, power loss, accessibility and installation/upgrade gates remain
+NOT TESTED. Stable promotion is blocked. Earlier rc.2 evidence is historical only.

@@ -1,1 +1,4 @@
-<resources><string name="data">Data</string><string name="consumed">Consumed material — no return expected</string><string name="return_by">Return by · %1$s</string></resources>
+<resources><string name="data">Data</string><string name="consumed">Consumed material — no return expected</string><string name="return_by">Return by · %1$s</string><string name="return_summary">Returning %1$d · %2$d still outstanding%3$s</string>
+<string name="return_hold_warning">\nThis entire item/lot will be on hold.</string>
+<string name="return_quantity_range">Enter a quantity from 1–%1$d.</string>
+</resources>
