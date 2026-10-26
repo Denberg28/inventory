@@ -989,11 +989,11 @@ public final class MainActivity extends Activity {
         int n = number(qty);
         model.validateReturn(loanId, n, condition.getSelectedItem().toString(), "");
         boolean hold = !condition.getSelectedItem().toString().equals("Available");
-        summary.setText("Returning " + n + " · " + (l.quantity - l.returned - n)
-            + " still outstanding" + (hold ? "\nThis entire item/lot will be on hold." : ""));
+        summary.setText(getString(R.string.return_summary, n, l.quantity - l.returned - n,
+            hold ? getString(R.string.return_hold_warning) : ""));
         summary.setTextColor(hold ? 0xff914323 : NAVY);
       } catch (IllegalArgumentException ex) {
-        summary.setText("Enter a quantity from 1–" + (l.quantity - l.returned) + ".");
+        summary.setText(getString(R.string.return_quantity_range, l.quantity - l.returned));
         summary.setTextColor(0xff914323);
       }
     };

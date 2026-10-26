@@ -39,6 +39,7 @@ public class PreviewTest {
         "Practical session",
         false);
     a.model.loans.get(0).due = java.time.LocalDate.now().minusDays(1).toString();
+    a.model.loans.get(0).issued = java.time.Instant.now().minus(8, java.time.temporal.ChronoUnit.DAYS).toString();
     a.model.issue(
         "DL-003",
         95,
