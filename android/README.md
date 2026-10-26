@@ -1,4 +1,4 @@
-# Inventory for Android — 0.2.0-rc.3 development
+# Inventory for Android — 0.2.0-rc.4 unsigned rebuild
 
 A minimal, offline inventory app for a drone laboratory. Register inventory with the
 phone camera, issue tools/materials, and follow outstanding returns. This is a new native
@@ -6,16 +6,17 @@ Android implementation; the Windows app and its database remain separate.
 
 ## Current build status
 
-rc.3 adds audited return-date changes and a live return summary. It is a development
-build; the GitHub release path publishes an explicitly unsigned Preview APK and matching
-source kit. The unsigned APK cannot be installed until signed with the original key. The rc.2 Preview signing key is unavailable in this
-workspace; preserve the installed app and its data. CI debug APKs use temporary test
-keys and must not be treated as compatible upgrades. See `RELEASE.md` and
-`docs/FOLLOW_UP.md` for acceptance, current evidence and publication blockers.
+rc.4 rebuilds the existing rc.3 app as an **unsigned Preview APK**, preserving the
+`ph.dronelab.inventory.preview` package. Application behavior, UI, schema and dependencies
+are unchanged. GitHub Releases supplies the build, matching source, manifest and checksums.
+The unsigned APK cannot be installed until signed with the original Preview key; preserve
+the installed app/data. The previously published installable build is rc.2 Preview.
+See `RELEASE.md` and `docs/VERIFICATION.md` for build commands and evidence boundaries.
 
 ## Use
 
-1. Install the latest published candidate APK on Android 8.0 or newer. Configure a device PIN, pattern or
+1. These usage steps apply to a signed candidate APK on Android 8.0 or newer;
+   the rc.4 unsigned build is not directly installable. Configure a device PIN, pattern or
    password first. Unlock Inventory using that screen lock.
 2. Tap **Scan label** to read an item barcode/QR value, or **Register item** to type an entry.
    An existing label opens its item. A new label asks before registration. Scanning never

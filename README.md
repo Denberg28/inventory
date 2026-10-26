@@ -2,7 +2,13 @@
 
 ## Android phone app
 
-The native offline Android inventory app is in [android/](android/README.md). It uses the phone camera for barcode/QR scanning, tracks issues and returns, and supports CSV exchange and encrypted backups. The latest published phone build is [0.2.0-rc.2 Preview](https://github.com/Denberg28/inventory/releases/tag/android-v0.2.0-rc.2); physical-device validation is pending. The rc.3 development update adds audited due-date changes and live return summaries; a clearly marked unsigned build can be published, while an installable update awaits the existing Preview signing key. Android and Windows use separate data stores.
+The native offline Android inventory app is in [android/](android/README.md). It uses the
+phone camera for barcode/QR scanning, tracks issues/returns, and supports CSV exchange and
+encrypted backups. [rc.3 unsigned build](https://github.com/Denberg28/inventory/releases/tag/android-v0.2.0-rc.3)
+is the published baseline; rc.4 rebuilds it with unchanged application behavior. Unsigned
+builds cannot be installed until signed with the original Preview key. The previously
+published installable build is [rc.2 Preview](https://github.com/Denberg28/inventory/releases/tag/android-v0.2.0-rc.2).
+Physical-device validation is pending. Android and Windows use separate data stores.
 
 Build Android: `cd android` then `./gradlew testDebugUnitTest assembleDebug assembleRelease lintDebug lintRelease`.
 

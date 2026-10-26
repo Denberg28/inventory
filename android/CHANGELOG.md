@@ -1,3 +1,12 @@
+# 0.2.0-rc.4 — unsigned rebuild, 27 October 2026 (Asia/Manila)
+
+- Rebuild the existing Preview package as requested, with version code 4.
+- Read expected APK version code from Gradle instead of hardcoding rc.3's code in
+  release packaging; validate it against release-request.json and APK output metadata.
+- Application behavior, UI, inventory schema and runtime dependencies are unchanged.
+- Publish a new unsigned prerelease with source, manifest, notes and checksums;
+  preserve all previous versions. Signing/installation limits remain explicit.
+
 ## Unsigned delivery follow-up — 27 October 2026
 
 - Package the existing Preview identity without a replacement signing certificate.
