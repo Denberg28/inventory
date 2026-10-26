@@ -4,8 +4,9 @@
   is older than current lint metadata, and the live numeric summary triggers the plural
   heuristic. No checks are suppressed; see VERIFICATION.md.
 
-- rc.3 APK publication is BLOCKED: rc.2 Preview signing material is not available.
-  CI-generated debug keys do not preserve installed-app upgrade compatibility. See RELEASE.md.
+- rc.3 signed APK publication is BLOCKED: rc.2 Preview signing material is not available.
+  CI-generated debug keys do not preserve installed-app upgrade compatibility. The
+  unsigned build prerelease cannot be installed until signed with the original key. See RELEASE.md.
 
 - rc.2 debug builds install as Inventory Preview, with an independent package/data store.
   The original rc.1 app stays installed. Preview changes do not synchronize back. The

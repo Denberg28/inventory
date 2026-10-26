@@ -1,3 +1,11 @@
+## Unsigned delivery follow-up — 27 October 2026
+
+- Package the existing Preview identity without a replacement signing certificate.
+- Add a gated GitHub prerelease workflow with tests/lint, unsigned APK checks,
+  matching source kit, manifest, release notes and checksums. Existing releases are retained.
+- Signed installation still requires the published rc.2 Preview key; no signing or
+  package identity change is authorized or performed.
+
 # 0.2.0-rc.3 — development, 27 October 2026 (Asia/Manila)
 
 - Audited due-date changes for open issues, with mandatory reason, stale-date rejection

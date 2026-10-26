@@ -7,6 +7,21 @@ No runtime dependency, package identity or Windows source/data change.
 Changes: audited return-date changes, original issue context and live return summary before
 saving. See `docs/FOLLOW_UP.md` and `docs/TESTING.md`.
 
+## Unsigned GitHub delivery
+
+The follow-up release request authorizes proceeding with the build/release. Publish an
+explicitly **unsigned build prerelease** containing the existing Preview package and
+matching source. It is not an installable update and does not establish or change any
+signing identity. The signed-installation blocker below remains. Previous releases/data
+are preserved. GitHub Actions validates tests, lint, APK metadata, absence of signatures,
+source identity and asset checksums before publishing; it refuses to replace a release.
+
+Build the existing Preview identity unsigned with
+`./gradlew -PinventoryUnsignedPreview=true testDebugUnitTest lintDebug lintRelease assembleDebug assembleRelease`.
+The flag affects signing only; a normal debug build retains its normal test-signing setup.
+`release-request.json` must match the configured version. GitHub publication runs only
+from main; PRs perform verification and packaging without publishing.
+
 ## Build and publication
 
 Required checks: `./gradlew --no-daemon testDebugUnitTest lintDebug lintRelease
@@ -17,7 +32,7 @@ passes all 48 Android tests, both builds and lint (zero errors, two retained war
 See `docs/VERIFICATION.md` and `DELIVERY.json` for exact-commit results and asset hashes.
 The subsequent evidence/documentation commit does not change application source.
 
-APK release is **BLOCKED** until the existing signing material is recovered or the user
+Signed installable APK release is **BLOCKED** until the existing signing material is recovered or the user
 explicitly authorizes a deliberate signing/identity migration. No key is in source.
 Expected published rc.2 Preview certificate SHA-256:
 `df5a504e375d94a473b043c8e903fcee3b3805c9f0cde4c2b5af95c248d67025`.

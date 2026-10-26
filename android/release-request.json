@@ -1,0 +1,6 @@
+{
+  "version": "0.2.0-rc.3",
+  "kind": "unsigned-preview-build",
+  "package": "ph.dronelab.inventory.preview",
+  "installation": "Blocked until signed with the existing rc.2 Preview key"
+}
