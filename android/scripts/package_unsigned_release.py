@@ -22,7 +22,9 @@ if (repo / '.git').exists():
     if actual != args.source_commit:
         raise SystemExit('Source commit does not match checkout')
 request = json.loads((root / 'release-request.json').read_text())
-version = re.search(r"versionName '([^']+)'", (root / 'app/build.gradle').read_text()).group(1)
+gradle = (root / 'app/build.gradle').read_text()
+version = re.search(r"versionName '([^']+)'", gradle).group(1)
+version_code = int(re.search(r'versionCode\s+(\d+)', gradle).group(1))
 if request['version'] != version or request['kind'] != 'unsigned-preview-build':
     raise SystemExit('Release request does not match the configured unsigned build')
 meta_path = root / 'app/build/outputs/apk/debug/output-metadata.json'
@@ -30,7 +32,8 @@ meta = json.loads(meta_path.read_text())
 if meta['applicationId'] != request['package'] or len(meta['elements']) != 1:
     raise SystemExit('Unexpected package identity or split APK output')
 element = meta['elements'][0]
-if element['versionName'] != version or element['versionCode'] != 3:
+if (element['versionName'] != version or element['versionCode'] != version_code
+        or request.get('version_code', version_code) != version_code):
     raise SystemExit('APK version does not match this release')
 apk = meta_path.parent / element['outputFile']
 if apk.parent.resolve() != meta_path.parent.resolve() or apk.suffix != '.apk':
@@ -98,7 +101,9 @@ No replacement key or package identity was created. Keep the installed app and i
 do not uninstall or clear data to work around signing. This release makes the verified
 build and matching source available while signed installation remains blocked.
 
-Changes: audited open-loan return-date changes with mandatory reasons, preservation of
+Rebuild scope: {request.get('summary', 'Unsigned Preview build delivery.')}
+
+Included functionality: audited open-loan return-date changes with mandatory reasons, preservation of
 custody/original issue details, and live return balances/held-condition warnings.
 Routine returns retain one save action. Schema and backup format remain version 1.
 

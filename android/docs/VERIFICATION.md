@@ -1,3 +1,18 @@
+# Verification — 0.2.0-rc.4 unsigned rebuild
+
+Current scope is version/build metadata and packaging version validation. The application
+Java/resources, UI, schema and runtime dependencies are unchanged from rc.3.
+Required checks: testDebugUnitTest, lintDebug, lintRelease, assembleDebug and assembleRelease
+with inventoryUnsignedPreview=true, followed by strict unsigned release packaging.
+
+The published release BUILD-MANIFEST.json is authoritative for the rebuilt source commit,
+actual test counts, lint findings and asset hashes. SHA256SUMS must match all other assets.
+PR checks do not publish; the release workflow rebuilds/verifies the exact main commit.
+Physical-device and signed installation checks remain NOT TESTED. Historical evidence
+below applies only to the explicitly recorded rc.3 / rc.2 source commits.
+
+---
+
 # Verification — 0.2.0-rc.3 development
 
 27 October 2026, Asia/Manila. Tested application source:

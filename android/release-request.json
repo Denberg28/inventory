@@ -1,6 +1,8 @@
 {
-  "version": "0.2.0-rc.3",
+  "version": "0.2.0-rc.4",
   "kind": "unsigned-preview-build",
   "package": "ph.dronelab.inventory.preview",
-  "installation": "Blocked until signed with the existing rc.2 Preview key"
+  "installation": "Blocked until signed with the existing rc.2 Preview key",
+  "version_code": 4,
+  "summary": "Unsigned rebuild of rc.3; application behavior, UI, schema and runtime dependencies are unchanged."
 }
