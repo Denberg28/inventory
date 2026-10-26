@@ -2,7 +2,7 @@
 
 Publication authorized by the user on 26 October 2026. Android source is added under
 `android/`; the root workflow runs its build/tests/lint from that directory. Windows
-source and data remain separate. The repository stays private.
+source and data remain separate. The owner made the repository public and requested retrying publication on 26 October 2026. Earlier GitHub Actions attempts did not start because of the account billing/spending restriction; a new run verifies the candidate after the visibility change.
 
 The GitHub prerelease attaches the exact previously verified APK and standalone source
 build kit. Runtime source, resources and Gradle configuration match the delivered
