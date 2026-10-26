@@ -14,7 +14,7 @@ keys and must not be treated as compatible upgrades. See `RELEASE.md` and
 
 ## Use
 
-1. Install the candidate APK on Android 8.0 or newer. Configure a device PIN, pattern or
+1. Install the latest published candidate APK on Android 8.0 or newer. Configure a device PIN, pattern or
    password first. Unlock Inventory using that screen lock.
 2. Tap **Scan label** to read an item barcode/QR value, or **Register item** to type an entry.
    An existing label opens its item. A new label asks before registration. Scanning never

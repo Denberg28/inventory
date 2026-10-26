@@ -2,14 +2,122 @@
   "version": "0.2.0-rc.3",
   "date": "2026-10-27",
   "timezone": "Asia/Manila",
-  "tier": "development; APK publication blocked",
-  "baseline_commit": "b7f758d",
-  "automated_checks": "PENDING exact-commit GitHub Actions",
-  "local_gradle": "BLOCKED: dependency bootstrap network unavailable",
-  "apk_publication": "BLOCKED: published rc.2 Preview signing key unavailable",
-  "expected_preview_signer_sha256": "df5a504e375d94a473b043c8e903fcee3b3805c9f0cde4c2b5af95c248d67025",
+  "source_commit": "26c615e1277d715fd6034aeb4f034fed1ad9c4ab",
+  "android_workflow": "https://github.com/Denberg28/inventory/actions/runs/40386393722",
+  "workflow_artifact_id": 12681051630,
+  "archive_sha256": "f8ba1dcf7907e7faa41f45649c03e7785e04290a2b26f69ff8358afb88ee1386",
+  "build_targets": {
+    "testDebugUnitTest": "PASS",
+    "lintDebug": "PASS",
+    "lintRelease": "PASS",
+    "assembleDebug": "PASS",
+    "assembleRelease": "PASS"
+  },
+  "tests": {
+    "tests": 48,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "suites": [
+    {
+      "name": "ph.dronelab.inventory.UiTest",
+      "tests": "11",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "ph.dronelab.inventory.PreviewTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "ph.dronelab.inventory.StorageTest",
+      "tests": "7",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "ph.dronelab.inventory.FollowUpUiTest",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "ph.dronelab.inventory.BackupCodecTest",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "ph.dronelab.inventory.ModelTest",
+      "tests": "20",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "ph.dronelab.inventory.LoanFollowUpTest",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    }
+  ],
+  "lint": {
+    "debug": {
+      "errors": 0,
+      "warnings": 2,
+      "ids": [
+        "OldTargetApi",
+        "PluralsCandidate"
+      ]
+    },
+    "release": {
+      "errors": 0,
+      "warnings": 2,
+      "ids": [
+        "OldTargetApi",
+        "PluralsCandidate"
+      ]
+    }
+  },
+  "assets": [
+    {
+      "name": "Inventory-Android-v0.2.0-rc.3-Source-Build-Kit.zip",
+      "bytes": 283050,
+      "sha256": "8686559e80d8735098b13e134e3278d5b871bbdb26393a9975073744c1889789",
+      "distribution": "Matching source build kit for the tested source commit; available in CI"
+    },
+    {
+      "name": "app-debug.apk",
+      "bytes": 509533,
+      "sha256": "94808c3d14e747d5304d39c7eba55ee599fa5b7e0dba3957cb9597d379ed0901",
+      "distribution": "CI only; not a compatible signed app update"
+    },
+    {
+      "name": "app-release-unsigned.apk",
+      "bytes": 408496,
+      "sha256": "be0bc62ae214833923a37900cc888e9f66a0318e55cf84247c3b64d457d226a3",
+      "distribution": "CI only; not a compatible signed app update"
+    }
+  ],
   "schema": 1,
-  "version_code": 3,
+  "local_gradle": "BLOCKED: dependency bootstrap network unavailable",
+  "apk_publication": "BLOCKED: rc.2 Preview signing key unavailable; temporary CI debug signer must not replace it",
+  "expected_preview_signer_sha256": "df5a504e375d94a473b043c8e903fcee3b3805c9f0cde4c2b5af95c248d67025",
   "physical_device": "NOT TESTED",
-  "signing_identity_change_authorized": false
+  "implementation_sha256": "6d0da373da5f61f92dfe7ff3f038448ee896a74c46cee12382f8543d1a47cdc5",
+  "fingerprint_method": "Sorted app/src/main files then app/build.gradle, build.gradle, settings.gradle; each Android-relative UTF-8 path, NUL, bytes, NUL",
+  "tier": "development; build verified and simulator tested; APK publication blocked",
+  "version_code": 3,
+  "windows_workflow": "https://github.com/Denberg28/inventory/actions/runs/40386393806",
+  "windows_ci": "PASS: software, Linux UI simulation and Windows candidate build",
+  "lint_disposition": "OldTargetApi: pinned SDK 35 retained pending a separately tested migration. PluralsCandidate: heuristic warning for an English numeric summary with no inflected noun. Neither check suppressed."
 }

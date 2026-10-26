@@ -14,7 +14,7 @@ routine returns.
 | Old/new dates, loan ID and mandatory reason remain in audit history | Domain; full backup decode and CSV current-date checks |
 | Invalid, unchanged, past, stale and completed-loan changes reject without mutation | Domain and storage rollback tests |
 | Return summary updates remaining balance and held-condition warning; cancel does not save | Robolectric UI test |
-| Excess return fails before confirmation; original form remains | Robolectric UI test |
+| Excess return fails before saving; original form remains | Robolectric UI test |
 | Dismissed date picker is removed; chosen date is visible | Robolectric UI test |
 | Existing custody/import/crypto/layout behavior remains | Full Android regression and both variant lint/builds |
 
@@ -24,7 +24,9 @@ to today or move a future date earlier, but cannot select a past date. The exist
 Unreturned filters and all-issues CSV use the resulting current due date. Consumed
 materials create no loan and therefore have no return date to edit.
 
-Review evidence: exact-commit GitHub Actions is required. Local Gradle dependency
+Review evidence: the application source at `26c615e1277d715fd6034aeb4f034fed1ad9c4ab`
+passes all 48 Android tests and both build/lint variants. See `VERIFICATION.md` for
+exact-commit CI links, reviewed renders, checksums and the two retained lint warnings. Local Gradle dependency
 bootstrap is blocked by the workspace network. Historical rc.2 evidence under
 `docs/evidence/` does not verify rc.3. APK publication is blocked until the rc.2 Preview
 signer is available; temporary CI debug keys cannot establish upgrade compatibility.

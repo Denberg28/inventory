@@ -12,7 +12,10 @@ saving. See `docs/FOLLOW_UP.md` and `docs/TESTING.md`.
 Required checks: `./gradlew --no-daemon testDebugUnitTest lintDebug lintRelease
 assembleDebug assembleRelease`. CI also produces the matching source kit.
 Local Gradle bootstrap is blocked by restricted network access; GitHub Actions supplies
-build/test evidence. Check the exact commit's run before using any result.
+build/test evidence. The final application source at `26c615e1277d715fd6034aeb4f034fed1ad9c4ab`
+passes all 48 Android tests, both builds and lint (zero errors, two retained warnings).
+See `docs/VERIFICATION.md` and `DELIVERY.json` for exact-commit results and asset hashes.
+The subsequent evidence/documentation commit does not change application source.
 
 APK release is **BLOCKED** until the existing signing material is recovered or the user
 explicitly authorizes a deliberate signing/identity migration. No key is in source.
