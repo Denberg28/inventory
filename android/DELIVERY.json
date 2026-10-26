@@ -1,0 +1,69 @@
+{
+  "version": "0.2.0-rc.1",
+  "date": "2026-10-26",
+  "tier": "debug-signed Android test candidate",
+  "tests": {
+    "tests": 36,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "suites": [
+    {
+      "name": "ph.dronelab.inventory.BackupCodecTest",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "ph.dronelab.inventory.ModelTest",
+      "tests": 20,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "ph.dronelab.inventory.PreviewTest",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "ph.dronelab.inventory.StorageTest",
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "ph.dronelab.inventory.UiTest",
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  ],
+  "lint": {
+    "errors": 0,
+    "warnings": 0
+  },
+  "apk": {
+    "name": "Inventory-Android-v0.2.0-rc.1-test.apk",
+    "sha256": "a9e85306ff38aacf5470a65738d8eaacc389beea215222623bba4d56d367eebd",
+    "bytes": 499820,
+    "package": "ph.dronelab.inventory",
+    "min_sdk": 26,
+    "target_sdk": 35,
+    "permissions": [
+      "android.permission.CAMERA"
+    ],
+    "signature": "APK v2 verified; Android Debug test signer"
+  },
+  "implementation_sha256": "714254d2aefa0887259b382a796c0ed1cf0371cab111172b2c8925b9d3d3bb33",
+  "physical_device": "NOT TESTED",
+  "camera_hardware": "NOT TESTED",
+  "android_keystore_hardware": "NOT TESTED",
+  "production_signing": "NOT ESTABLISHED"
+}

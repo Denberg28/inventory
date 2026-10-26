@@ -1,5 +1,13 @@
 # Drone Laboratory Inventory
 
+## Android phone app
+
+The native offline Android inventory app is in [android/](android/README.md). It uses the phone camera for barcode/QR scanning, tracks issues and returns, and supports CSV exchange and encrypted backups. Android 0.2.0-rc.1 is a debug-signed test candidate; physical-device validation is pending. Android and Windows use separate data stores.
+
+Build Android: `cd android` then `./gradlew testDebugUnitTest assembleDebug lintDebug`.
+
+## Windows application
+
 **0.1.0a4 — private test candidate.** Simple offline Windows inventory for equipment, tools and materials. Author: MD. No account, server, internet or runtime pip packages required.
 
 The original 0.1.0a1/0.1.0a2 source archives became inaccessible after workspace maintenance. This independently tested reconstruction was explicitly authorized on 11 October 2026. Earlier 59-test results do **not** certify this version. See [recovery and compatibility](docs/RECOVERY.md).
