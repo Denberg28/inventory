@@ -7,7 +7,8 @@ Android implementation; the Windows app and its database remain separate.
 ## Current build status
 
 rc.3 adds audited return-date changes and a live return summary. It is a development
-build, not a published APK update. The rc.2 Preview signing key is unavailable in this
+build; the GitHub release path publishes an explicitly unsigned Preview APK and matching
+source kit. The unsigned APK cannot be installed until signed with the original key. The rc.2 Preview signing key is unavailable in this
 workspace; preserve the installed app and its data. CI debug APKs use temporary test
 keys and must not be treated as compatible upgrades. See `RELEASE.md` and
 `docs/FOLLOW_UP.md` for acceptance, current evidence and publication blockers.
