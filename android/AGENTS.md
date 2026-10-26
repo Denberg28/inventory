@@ -125,7 +125,7 @@ Report concisely: what changed/why; version/commit/artifact; checks/results; unt
 - One workstation database. Barcode scanners must use USB HID keyboard mode and Enter suffix.
 - Asset checkout/return and material adjustments must update stock and audit history in one transaction.
 - Do not hard-delete inventory/history. Preserve IDs, database schema version, and upgrade backups.
-- Default delivery is a local private source test candidate. Remote pushes/publication require selected authorization.
+- Default delivery is a GitHub prerelease/test candidate under the standing policy below; stable promotion still requires all applicable gates.
 - Run `python -m unittest discover -s tests -v` and `python scripts/check_release.py` before packaging.
 - Real Windows startup/packaging and scanner HIL block stable promotion; simulation is not hardware evidence.
 
@@ -143,3 +143,19 @@ Robolectric tests are simulation, not Android Keystore or camera hardware valida
 Real phone installation, screen-lock lifecycle, camera/permission handling, local file
 pickers, power-loss recovery and upgrade/signing gates block stable promotion.
 Do not package local.properties, signing keys, Gradle caches or user inventory files.
+
+
+## Standing GitHub release policy — 26 October 2026
+
+The user instructed: "Always release in GitHub for all our projects," and added this to
+Marlou Prompt Constitution v3.1. Future development/build/release requests include
+standing authorization to commit/push reviewed changes and publish versioned GitHub
+Releases in the established project repository. Deliver the verified GitHub release
+link; local/Library/CI artifacts alone do not complete delivery. Publish eligible test
+builds as prereleases while physical/HIL/field checks remain incomplete; stable requires
+all applicable gates. Attach installable packages, matching source/build kit, notes,
+checksums and compatibility/rollback instructions. Preserve repository visibility, branch
+protection, signing continuity and previous releases. Never publish secrets/user data or
+known critical/high defects. This authorizes routine publication without asking again;
+it does not authorize visibility/signing changes, force pushes, destructive actions,
+new costs or expanded access. Report concrete access/publication blockers accurately.

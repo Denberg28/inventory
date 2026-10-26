@@ -1,29 +1,33 @@
-# GitHub candidate publication — 0.2.0-rc.1
+# Inventory Android 0.2.0-rc.2 — test build
 
-Publication authorized by the user on 26 October 2026. Android source is added under
-`android/`; the root workflow runs its build/tests/lint from that directory. Windows
-source and data remain separate. The owner made the repository public and requested retrying publication on 26 October 2026. Earlier GitHub Actions attempts did not start because of the account billing/spending restriction; a new run verifies the candidate after the visibility change.
+Prepared from `933e8ec04a14c707f0f08bfa4d08166bd1ecd0ac` (published rc.1 baseline).
+UI/workflow development and the next build were requested on 26 October 2026.
 
-The GitHub prerelease attaches the exact previously verified APK. The standalone source
-build kit includes the corrected SDK setup workflow; application code is unchanged. Runtime source, resources and Gradle configuration match the delivered
-implementation fingerprint in DELIVERY.json. The root README and CI integration do not
-change application behavior. The standalone kit's original workflow is retained inside
-android/.github for use when the Android directory is extracted as a standalone project.
+Changes: separate scan action, stock/condition and due-date filters, clearer item/loan
+cards, persistent form actions, individual-asset quantity controls, clearer consumption
+and unavailable-issue behavior, accurate archive/restore labels, grouped data actions,
+and dialog cleanup. No runtime dependency or database schema change. The release package ID is preserved;
+the debug build uses a separate Preview identity for safe testing.
 
-- APK SHA-256: a9e85306ff38aacf5470a65738d8eaacc389beea215222623bba4d56d367eebd
-- Standalone source kit SHA-256: 50604b254a4fd5c9fc34e42801a758584635c724516756b71b4dbffeb32dbcf4
-- Prior candidate verification: 36 automated tests; zero lint errors/warnings.
-- Original APK signature: Android Debug candidate signer. Uploading the same APK preserves
-  its signing identity for users who installed the candidate. CI-generated APKs use the
-  runner's debug signer; they are verification artifacts, not replacements for the release
-  asset. Production signing continuity remains a stable-release gate.
-- Physical camera, device credential, Keystore and document-provider checks remain pending.
+See `docs/UI_REVIEW.md`, `docs/VERIFICATION.md` and `DELIVERY.json` for final evidence.
+The source kit contains fictitious preview data only, never user records or signing keys.
+Android and Windows stores remain separate; Windows code/data were not modified.
 
-Use encrypted backups before clearing data or uninstalling. No private signing key,
-real inventory data, phone credentials or passphrases are committed.
+## Installation and rollback
 
-Publication complete: tag `android-v0.2.0-rc.1`, source commit `26474ebe6f441a6ec307172fcd59c19c8e26cd76`.
-Android and Windows push/PR checks passed before merge/publication. Android check:
-https://github.com/Denberg28/inventory/actions/runs/40300545751 .
-Release: https://github.com/Denberg28/inventory/releases/tag/android-v0.2.0-rc.1 .
-The published tag is retained unchanged; this follow-up documentation records final asset hashes.
+This is a debug-signed **Inventory Preview** app (`ph.dronelab.inventory.preview`).
+It installs beside the published Inventory app (`ph.dronelab.inventory`) with separate
+records and encryption keys. Do not uninstall or clear the working app. An encrypted
+`.dlinv` backup can copy data into Preview for testing. Preview edits are independent;
+there is no synchronization or automatic promotion of its records. CSV is not a complete
+custody/history backup. Test data and a disposable backup copy are recommended.
+
+The local debug certificate differs from the published rc.1 certificate; it is not an
+in-place upgrade. Production/release identity remains unchanged. A signed upgrade still
+requires the original key or a deliberate migration with a verified encrypted backup.
+
+Schema and encrypted-backup format remain version 1. Cross-version recovery has model
+format compatibility but physical phone migration is NOT TESTED. Keep the original APK
+and external backup for rollback. Production signing continuity and physical-device
+checks remain stable-release gates. Public GitHub publication is not claimed by this
+local build record.

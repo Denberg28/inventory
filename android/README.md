@@ -1,4 +1,4 @@
-# Inventory for Android — 0.2.0-rc.1
+# Inventory for Android — 0.2.0-rc.2
 
 A minimal, offline inventory app for a drone laboratory. Register inventory with the
 phone camera, issue tools/materials, and follow outstanding returns. This is a new native
@@ -8,7 +8,7 @@ Android implementation; the Windows app and its database remain separate.
 
 1. Install the candidate APK on Android 8.0 or newer. Configure a device PIN, pattern or
    password first. Unlock Inventory using that screen lock.
-2. Tap **Scan** to read an item barcode/QR value, or **Register item** to type an entry.
+2. Tap **Scan label** to read an item barcode/QR value, or **Register item** to type an entry.
    An existing label opens its item. A new label asks before registration. Scanning never
    issues stock or opens URLs. Camera decoding is bundled and works offline.
 3. Register each physical tool/equipment as one item with its own label and quantity 1.
@@ -23,8 +23,13 @@ Android implementation; the Windows app and its database remain separate.
    return damaged stock to service.
 6. **Edit** updates details and owned quantity; quantity cannot fall below outstanding
    custody. Category and ID are fixed after registration. Changes are recorded in history.
-   **Delete** archives a fully returned item and retains all history. **Data → Show archived
+   **Archive item** archives a fully returned item and retains all history. **Data → Show archived
    items** lets you inspect or restore it. Archived identifiers cannot be reused.
+
+Items offers Available, Issued, Low stock and On hold filters. Unreturned offers
+Overdue and Due today filters. Tap a loan to record a return. Scan label works from
+either view. Main form actions stay outside scrolling content. CSV reports and
+Backup & recovery are grouped under Data. See `docs/UI_REVIEW.md`.
 
 ## Data and security
 
@@ -102,9 +107,14 @@ Tests: `app/build/reports/tests/testDebugUnitTest/index.html`. Lint:
 `app/build/reports/lint-results-debug.html`.
 
 The delivered APK is a **debug-signed test candidate**, not a production-signed stable
-release. No prior Android package/signing baseline exists. Keep its APK and encrypted
-backups; a later APK signed with a different key requires uninstall/reinstall and backup
-restore. Production signing continuity must be established before stable distribution.
+release. The published rc.1 APK establishes a debug signing baseline. Keep that APK and
+verified encrypted backups. Compare signing certificates before updating; a different
+certificate cannot install over an existing package. This revision builds the debug
+variant as **Inventory Preview** (`ph.dronelab.inventory.preview`), which installs beside
+rc.1 with independent data and encryption keys. The release package ID stays
+`ph.dronelab.inventory`. Use an encrypted backup to copy records into Preview only for
+testing; changes made in Preview do not synchronize back. Prefer a separate test phone and
+preserve the working installation until backup recovery is verified. Production signing continuity must be established before stable distribution.
 Never include a private production signing key in source control or a public archive.
 
 Runtime dependencies: JourneyApps ZXing Embedded 4.3.0 (camera scanner) and Gson 2.11.0

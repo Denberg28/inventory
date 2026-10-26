@@ -127,4 +127,20 @@ Report concisely: what changed/why; version/commit/artifact; checks/results; unt
 - One workstation. USB HID keyboard scanner with Enter suffix. Scans only select; stock/custody changes require confirmation.
 - Preserve item IDs/category, audit transactions, optimistic revisions, recovery backup and single-instance lock.
 - Run core tests, GUI checks when display exists, self-test and source checks before candidate delivery. Native Windows and physical scanner gates block stable release.
-- User explicitly authorized rebuilding and committing to Denberg28/inventory on 11 October 2026. No public release, force push or source replacement in an existing nonempty branch.
+- User explicitly authorized rebuilding and committing to Denberg28/inventory on 11 October 2026. Routine GitHub publication is now authorized by the standing policy below (26 October 2026). No force push or unrelated source replacement.
+
+
+## Standing GitHub release policy — 26 October 2026
+
+The user instructed: "Always release in GitHub for all our projects," and added this to
+Marlou Prompt Constitution v3.1. Future development/build/release requests include
+standing authorization to commit/push reviewed changes and publish versioned GitHub
+Releases in the established project repository. Deliver the verified GitHub release
+link; local/Library/CI artifacts alone do not complete delivery. Publish eligible test
+builds as prereleases while physical/HIL/field checks remain incomplete; stable requires
+all applicable gates. Attach installable packages, matching source/build kit, notes,
+checksums and compatibility/rollback instructions. Preserve repository visibility, branch
+protection, signing continuity and previous releases. Never publish secrets/user data or
+known critical/high defects. This authorizes routine publication without asking again;
+it does not authorize visibility/signing changes, force pushes, destructive actions,
+new costs or expanded access. Report concrete access/publication blockers accurately.
