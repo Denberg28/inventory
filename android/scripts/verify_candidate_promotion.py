@@ -9,16 +9,22 @@ repo = Path(__file__).resolve().parents[2]
 request = json.loads((repo / 'android/release-request.json').read_text())
 assert request['kind'] == 'signed-candidate' and request['stage'] == 'publish'
 assert request['signing_backup_saved'] is True
+assert request['initial_signing_bootstrap'] is False
 folder = repo / 'publish'
 manifest_file = next(folder.glob('*-BUILD-MANIFEST.json'))
 manifest = json.loads(manifest_file.read_text())
 assert manifest['version'] == request['version'] and manifest['package'] == request['package']
 assert manifest['source_commit'] == request['source_commit']
+assert manifest['version_code'] == request['version_code']
+assert manifest['tests']['tests'] > 0
 assert manifest['signer_certificate_sha256'] == request['certificate_sha256']
 assert manifest['tests']['failures'] == manifest['tests']['errors'] == manifest['tests']['skipped'] == 0
 assert all(manifest['install_check'][k] == 'PASS' for k in ['install', 'launch', 'same_apk_reinstall', 'coexistence_with_rc2_preview'])
 files = {p.name: p for p in folder.iterdir() if p.is_file()}
 assert len(files) == 7
+apk = files['Inventory-Android-v' + request['version'] + '-Candidate.apk']
+assert hashlib.sha256(apk.read_bytes()).hexdigest() == request['apk_sha256']
+assert manifest['install_check']['apk_sha256'] == request['apk_sha256']
 assert not any(p.suffix.lower() in ['.p12', '.pfx', '.pass', '.pem', '.p7m', '.keystore', '.jks'] for p in files.values())
 for line in next(folder.glob('*-SHA256SUMS.txt')).read_text().splitlines():
     digest, name = line.split('  ', 1)

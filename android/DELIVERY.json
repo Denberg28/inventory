@@ -3,8 +3,58 @@
   "version_code": 5,
   "tier": "signed Candidate installation repair",
   "package": "ph.dronelab.inventory.candidate",
-  "status": "Prepare; promotion requires passed Android 16 install smoke test and retained signing recovery",
+  "status": "Verified signed candidate selected for exact-artifact GitHub prerelease promotion",
   "schema": 1,
   "physical_phone": "NOT TESTED",
-  "prior_unsigned_apks": "Developer artifacts only; not installable"
+  "prior_unsigned_apks": "Developer artifacts only; not installable",
+  "source_commit": "466d580a85884fffb8aa2332c3a2fea4faf5352a",
+  "build_run_id": 40448909777,
+  "signing": "Retained dedicated Candidate key; private recovery saved and keystore certificate verified",
+  "certificate_sha256": "920d8d691dbedc3c2627363b915c78de516486775acc5c6f8b5234ebfa84f5e0",
+  "apk_sha256": "03fb8d9a728574142d2944887bc1e571933d3819b9b32e03a4aa3c6c4ec83c7c",
+  "tests": {
+    "tests": 52,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "lint": {
+    "debug": {
+      "errors": 0,
+      "warnings": 2,
+      "ids": [
+        "OldTargetApi",
+        "PluralsCandidate"
+      ]
+    },
+    "release": {
+      "errors": 0,
+      "warnings": 2,
+      "ids": [
+        "OldTargetApi",
+        "PluralsCandidate"
+      ]
+    },
+    "candidate": {
+      "errors": 0,
+      "warnings": 2,
+      "ids": [
+        "OldTargetApi",
+        "PluralsCandidate"
+      ]
+    }
+  },
+  "install_check": {
+    "package": "ph.dronelab.inventory.candidate",
+    "version_code": 5,
+    "android_api": "36",
+    "apk_sha256": "03fb8d9a728574142d2944887bc1e571933d3819b9b32e03a4aa3c6c4ec83c7c",
+    "install": "PASS",
+    "launch": "PASS",
+    "same_apk_reinstall": "PASS",
+    "coexistence_with_rc2_preview": "PASS",
+    "physical_phone": "NOT TESTED",
+    "scope": "Emulator package installation/coexistence and initial screen/process launch only"
+  },
+  "release_url": "https://github.com/Denberg28/inventory/releases/tag/android-v0.2.0-rc.5"
 }

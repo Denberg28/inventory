@@ -1,3 +1,34 @@
+# rc.5 final build verification — 27 October 2026 (Asia/Manila)
+
+**PASS — reviewed, build verified and simulator tested.** Source commit:
+`466d580a85884fffb8aa2332c3a2fea4faf5352a`.
+Main build: https://github.com/Denberg28/inventory/actions/runs/40448909777.
+
+All 52 Android tests passed (zero failures/errors/skipped). Debug, release and Candidate
+build/lint passed with zero errors; two retained warnings per variant are OldTargetApi
+and PluralsCandidate. APK v2 signature verification, Android 16 (API 36) emulator
+installation, initial launch, same-APK reinstall and coexistence with rc.2 Preview passed.
+The source kit was compared byte-for-byte with the built Android source; the artifact
+archive and every release checksum passed independent verification.
+
+Candidate certificate SHA-256:
+`920d8d691dbedc3c2627363b915c78de516486775acc5c6f8b5234ebfa84f5e0`.
+APK SHA-256: `03fb8d9a728574142d2944887bc1e571933d3819b9b32e03a4aa3c6c4ec83c7c`.
+
+The actual main-build private key was recovered, validated against this certificate and
+retained privately before promotion. No key/password/recovery file is in the public
+release or source kit. Promotion pins source, build run, certificate and APK checksum;
+it publishes the same tested binary, without rebuilding or changing signing identity.
+Future builds must use this retained key and must not bootstrap another Candidate key.
+
+Physical-phone camera, credential/permission lifecycle, Keystore, file providers,
+power-loss, accessibility and backup migration remain **NOT TESTED**. This is a test
+candidate, not stable. Prior apps/data/releases are preserved. The signed Candidate has
+independent records; transfer copies only through verified encrypted .dlinv backups.
+GitHub publication is confirmed by the resulting release, not by this source document.
+
+---
+
 # Verification — rc.5 signed installer repair
 
 Required current evidence: SDK apksigner v2 verification, Android 16 package-manager
