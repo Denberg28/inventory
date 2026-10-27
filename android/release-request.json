@@ -2,10 +2,15 @@
   "version": "0.2.0-rc.5",
   "version_code": 5,
   "kind": "signed-candidate",
-  "stage": "prepare",
+  "stage": "publish",
   "package": "ph.dronelab.inventory.candidate",
   "label": "Inventory Candidate",
-  "initial_signing_bootstrap": true,
+  "initial_signing_bootstrap": false,
   "summary": "Signed Candidate installer with retained signing identity, Android 16 installation checks, and missing-primary recovery protection.",
-  "signing_authorized_on": "2026-10-27"
+  "signing_authorized_on": "2026-10-27",
+  "signing_backup_saved": true,
+  "source_commit": "466d580a85884fffb8aa2332c3a2fea4faf5352a",
+  "build_run_id": 40448909777,
+  "certificate_sha256": "920d8d691dbedc3c2627363b915c78de516486775acc5c6f8b5234ebfa84f5e0",
+  "apk_sha256": "03fb8d9a728574142d2944887bc1e571933d3819b9b32e03a4aa3c6c4ec83c7c"
 }
