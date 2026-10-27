@@ -119,16 +119,16 @@ On Windows use `gradlew.bat`. Output: `app/build/outputs/apk/debug/app-debug.apk
 Tests: `app/build/reports/tests/testDebugUnitTest/index.html`. Lint:
 `app/build/reports/lint-results-debug.html`.
 
-The delivered APK is a **debug-signed test candidate**, not a production-signed stable
-release. The published rc.1 APK establishes a debug signing baseline. Keep that APK and
-verified encrypted backups. Compare signing certificates before updating; a different
-certificate cannot install over an existing package. This revision builds the debug
-variant as **Inventory Preview** (`ph.dronelab.inventory.preview`), which installs beside
-rc.1 with independent data and encryption keys. The release package ID stays
-`ph.dronelab.inventory`. Use an encrypted backup to copy records into Preview only for
-testing; changes made in Preview do not synchronize back. Prefer a separate test phone and
-preserve the working installation until backup recovery is verified. Production signing continuity must be established before stable distribution.
-Never include a private production signing key in source control or a public archive.
+The phone download is a **signed Inventory Candidate test release**, with a dedicated
+retained key and package `ph.dronelab.inventory.candidate`. Build it with
+`./gradlew testDebugUnitTest lintDebug lintRelease lintCandidate assembleDebug assembleRelease assembleCandidate`
+and the private signing paths documented in RELEASE.md. The `debug` variant is only a
+local developer Preview build; CI debug keys do not provide update compatibility.
+The production `release` variant remains unsigned. Never distribute either as a Candidate
+update. Future Candidate updates must use the recorded certificate and retained key.
+Earlier Inventory/Preview apps have independent data; transfer a copy with an encrypted
+.dlinv backup, preserve the old installation, and verify records before relying on it.
+Never include signing keys/passwords in source control or public release assets.
 
 Runtime dependencies: JourneyApps ZXing Embedded 4.3.0 (camera scanner) and Gson 2.11.0
 (typed serialization). Both use Apache License 2.0. AndroidX libraries arrive through the

@@ -62,7 +62,9 @@ launch passed on Android API {smoke['android_api']} in an emulator. It installs 
 Do not uninstall or clear the old app. The Candidate has separate local records and
 keys; copy records only through a verified encrypted `.dlinv` backup and restore.
 
-This fixes the invalid unsigned installer downloads. Inventory features match rc.4:
+This fixes the invalid unsigned installer downloads and includes PR #7 recovery protection:
+a missing primary inventory file cannot silently initialize empty data over surviving
+recovery copies. Both local recovery choices are available at failed startup. Features:
 phone scanning, registration/edit/archive, issue/partial return, audited due-date changes,
 live return balances, CSV and encrypted backups. Schema remains version 1.
 

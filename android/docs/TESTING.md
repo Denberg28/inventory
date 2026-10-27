@@ -19,6 +19,9 @@ Run `./gradlew testDebugUnitTest assembleDebug assembleRelease lintDebug lintRel
 - AES-GCM randomized nonce, round-trip, wrong passphrase and tamper rejection.
 - Atomic file interrupted write, primary corruption, previous-save recovery, rejected write
   rollback and pre-restore recovery (Robolectric simulation with a test key).
+- Missing primary with surviving previous-save/pre-restore files must refuse empty startup;
+  explicit recovery restores the chosen copy. Detect legacy AtomicFile `.bak` files before
+  key generation, and retain normal empty startup on a new installation.
 - Phone layout, scanned existing/new label paths, unreturned filtering and dialog cleanup.
 
 ## UI revision acceptance

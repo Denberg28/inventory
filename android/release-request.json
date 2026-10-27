@@ -6,5 +6,6 @@
   "package": "ph.dronelab.inventory.candidate",
   "label": "Inventory Candidate",
   "initial_signing_bootstrap": true,
-  "summary": "Fix invalid unsigned downloads with a signed Candidate installer that coexists with the previous apps."
+  "summary": "Signed Candidate installer with retained signing identity, Android 16 installation checks, and missing-primary recovery protection.",
+  "signing_authorized_on": "2026-10-27"
 }
