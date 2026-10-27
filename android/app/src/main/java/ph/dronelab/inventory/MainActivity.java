@@ -244,6 +244,7 @@ public final class MainActivity extends Activity {
         label("Inventory could not be opened. Your stored files have been preserved.", 16, MUTED));
     button(root, "Retry opening", this::load, true);
     button(root, "Recover previous save", () -> recover(false), false);
+    button(root, "Recover before last restore", () -> recover(true), false);
     button(root, "Restore encrypted backup", () -> openDocument(READ_BACKUP), false);
   }
 

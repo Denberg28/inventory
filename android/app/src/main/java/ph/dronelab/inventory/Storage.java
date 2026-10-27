@@ -26,7 +26,7 @@ public final class Storage {
     ks.load(null);
     if (!ks.containsAlias("inventory-v1")) {
       Model.check(
-          !file.getBaseFile().exists(), "Encryption key is missing. Restore your external backup.");
+          !hasStoredData(), "Encryption key is missing. Restore your external backup.");
       KeyGenerator gen = KeyGenerator.getInstance("AES", "AndroidKeyStore");
       gen.init(
           new KeyGenParameterSpec.Builder(
@@ -70,10 +70,25 @@ public final class Storage {
   }
 
   public void load() throws Exception {
-    state =
-        file.getBaseFile().exists() || new File(file.getBaseFile() + ".bak").exists()
-            ? read(file)
-            : new Model();
+    if (committedFileExists(file)) {
+      state = read(file);
+    } else {
+      // A missing primary is not a new installation when a recovery copy survives.
+      // Opening an empty model would overwrite that copy on the next mutation.
+      Model.check(!hasStoredData(),
+          "Inventory file is missing. Recover previous save or restore an encrypted backup.");
+      state = new Model();
+    }
+  }
+
+  static boolean committedFileExists(AtomicFile f) {
+    return f.getBaseFile().exists() || new File(f.getBaseFile() + ".bak").exists();
+  }
+
+  boolean hasStoredData() {
+    return committedFileExists(file)
+        || committedFileExists(previous)
+        || committedFileExists(preRestore);
   }
 
   static void write(AtomicFile f, byte[] data) throws Exception {
