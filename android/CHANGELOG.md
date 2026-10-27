@@ -1,3 +1,14 @@
+# 0.2.0-rc.5 — signed installer repair
+
+- Replace unsigned phone downloads with a signed Inventory Candidate variant that
+  installs alongside earlier apps, preserving their data.
+- Require Android 16 emulator installation, initial launch, coexistence and same-APK
+  reinstall before publication; verify APK v2 signing and bind promotion to that exact hash.
+- Retain private signing recovery and block accidental future Candidate key replacement.
+- Include PR #7 recovery protection: refuse empty startup when local recovery survives,
+  preserve committed files before encryption-key initialization, and expose pre-restore recovery.
+- Preserve schema/backup format and previous releases. Physical phone gates remain.
+
 # 0.2.0-rc.4 — unsigned rebuild, 27 October 2026 (Asia/Manila)
 
 - Rebuild the existing Preview package as requested, with version code 4.

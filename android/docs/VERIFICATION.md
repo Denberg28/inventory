@@ -1,3 +1,18 @@
+# Verification — rc.5 signed installer repair
+
+Required current evidence: SDK apksigner v2 verification, Android 16 package-manager
+installation, initial launch, same-APK reinstall and coexistence with the verified rc.2
+Preview APK. The exact hash tested on the emulator must be the published signed artifact.
+All existing Android regressions and debug/release/candidate build/lint gates also apply.
+Private signing recovery must be retained before promotion. The release BUILD-MANIFEST,
+SIGNATURE and INSTALL-CHECK assets identify actual results and the built source commit.
+Until those gates pass, this is preparation, not an installable published claim.
+Physical-phone credentials, camera, Keystore, providers and data migration remain NOT TESTED.
+
+The following sections are historical rc.4/rc.3/rc.2 evidence, not certification of rc.5.
+
+---
+
 # Verification — 0.2.0-rc.4 unsigned rebuild
 
 Current scope is version/build metadata and packaging version validation. The application

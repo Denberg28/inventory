@@ -20,7 +20,7 @@ with an injected test key, not real Keystore/power-loss validation.
 Local checks: 36 Windows regression tests and repository source/self-test checks pass.
 Android build, lint and regression evidence will be supplied by the PR's CI run.
 Do not distribute its ephemeral debug APK as an update or publish another unsigned
-phone download. Signed publication is blocked until the existing signing key is available
-or a separate app identity is explicitly authorized and recoverable signing is established.
-The prepared rc.5 PR requires review of this signing decision and private key retention;
-its prior test evidence does not cover this additional recovery fix.
+phone download. The user authorized a separate retained Candidate signing identity on 27 October 2026.
+Signed publication requires the new combined build to pass all release checks and private
+signing recovery to be retained. Earlier rc.5 preparation evidence does not cover this
+additional fix; the combined build must run the 52-test suite again.
