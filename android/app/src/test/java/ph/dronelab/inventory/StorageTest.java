@@ -52,6 +52,55 @@ public class StorageTest {
   }
 
   @Test
+  public void missingPrimaryPreservesPreviousSaveUntilExplicitRecovery() throws Exception {
+    s.change(m -> m.save(tool(), true));
+    s.change(m -> m.archive("T1", true));
+    byte[] recovery = Files.readAllBytes(s.previous.getBaseFile().toPath());
+    assertTrue(s.file.getBaseFile().delete());
+    Storage reopened = new Storage(dir, key);
+    assertTrue(reopened.hasStoredData());
+    IllegalArgumentException error = assertThrows(IllegalArgumentException.class, reopened::load);
+    assertTrue(error.getMessage().contains("Recover previous save"));
+    assertNull(reopened.state);
+    assertArrayEquals(recovery, Files.readAllBytes(s.previous.getBaseFile().toPath()));
+    reopened.recover(reopened.recovery(false));
+    reopened.load();
+    assertFalse(reopened.snapshot().item("T1").archived);
+  }
+
+  @Test
+  public void missingPrimaryPreservesPreRestoreOnlyRecovery() throws Exception {
+    s.change(m -> m.save(tool(), true));
+    s.restore(new Model());
+    assertTrue(s.file.getBaseFile().delete());
+    assertTrue(s.previous.getBaseFile().delete());
+    Storage reopened = new Storage(dir, key);
+    assertThrows(IllegalArgumentException.class, reopened::load);
+    reopened.recover(reopened.recovery(true));
+    assertEquals("T1", reopened.snapshot().items.get(0).id);
+  }
+
+  @Test
+  public void legacyAtomicBackupIsDetectedAndRecovered() throws Exception {
+    s.change(m -> m.save(tool(), true));
+    File backup = new File(s.file.getBaseFile() + ".bak");
+    assertTrue(s.file.getBaseFile().renameTo(backup));
+    Storage reopened = new Storage(dir, key);
+    assertTrue(reopened.hasStoredData());
+    reopened.load();
+    assertEquals("T1", reopened.snapshot().items.get(0).id);
+    assertTrue(reopened.file.getBaseFile().exists());
+  }
+
+  @Test
+  public void freshInstallationStartsEmptyWithoutRecoveryFiles() throws Exception {
+    assertFalse(s.hasStoredData());
+    assertTrue(s.snapshot().items.isEmpty());
+    s.change(m -> m.save(tool(), true));
+    assertTrue(s.hasStoredData());
+  }
+
+  @Test
   public void persistenceAndRollbackOnRejectedOperation() throws Exception {
     s.change(m -> m.save(tool(), true));
     byte[] before = Files.readAllBytes(s.file.getBaseFile().toPath());
