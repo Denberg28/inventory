@@ -27,6 +27,8 @@ jobs:
           distribution: temurin
           java-version: '17'
       - uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
       - uses: gradle/actions/setup-gradle@v4
       - run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
       - run: cd android && ./gradlew --no-daemon testDebugUnitTest assembleDebug lintDebug lintRelease
@@ -73,6 +75,8 @@ jobs:
           distribution: temurin
           java-version: '17'
       - uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
       - run: sdkmanager 'build-tools;35.0.0' 'platform-tools'
       - name: Verify exact signed draft assets and source
         run: python3 scripts/verify_station_draft.py
