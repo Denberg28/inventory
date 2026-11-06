@@ -23,7 +23,11 @@ public class StationUiTest {
     a.stationScanned("borrower", "ID-002");
     a.stationDialog.dismiss();
     a.stationScanned("station", "M1");
-    LinearLayout fields = a.formDialogs.keySet().iterator().next();
+    // Dismissal callbacks may still be queued in Robolectric. Inspect the issue
+    // dialog created by this scan, rather than an arbitrary older station form.
+    LinearLayout fields = a.formDialogs.entrySet().stream()
+        .filter(e -> e.getValue() == a.stationTransactionForm)
+        .map(java.util.Map.Entry::getKey).findFirst().orElseThrow();
     boolean borrower = false;
     for (int n = 0; n < fields.getChildCount(); n++)
       if (fields.getChildAt(n) instanceof EditText e && "Borrower name / ID".contentEquals(e.getContentDescription()))
