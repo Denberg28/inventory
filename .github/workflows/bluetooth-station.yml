@@ -121,5 +121,5 @@ jobs:
           r = json.loads(subprocess.check_output(['gh','release','view',tag,'--json','isDraft,isPrerelease']))
           assert r['isDraft'] is True
           subprocess.run(['gh','release','upload',tag,'evidence/Inventory-Station-INSTALL-CHECK.json'], check=True)
-          subprocess.run(['gh','release','edit',tag,'--draft=false','--prerelease','--latest=false'], check=True)
+          subprocess.run(['gh','release','edit',tag,'--target',os.environ['GITHUB_SHA'],'--draft=false','--prerelease','--latest=false'], check=True)
           PY

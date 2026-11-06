@@ -11,7 +11,7 @@ tag = os.environ['STATION_RELEASE_TAG']
 digest = os.environ['STATION_APK_SHA256']
 assert re.fullmatch(r'station-v[0-9A-Za-z.\-]+', tag)
 assert re.fullmatch('[0-9a-f]{64}', digest)
-release = json.loads(subprocess.check_output(['gh', 'release', 'view', tag, '--json', 'isDraft']))
+release = json.loads(subprocess.check_output(['gh', 'release', 'view', tag, '--json', 'isDraft,targetCommitish']))
 assert release['isDraft'] is True, 'Never change a published release'
 folder = root / 'station-draft'
 folder.mkdir(exist_ok=False)
@@ -19,7 +19,13 @@ subprocess.run(['gh', 'release', 'download', tag, '--dir', str(folder)], check=T
 manifest = json.loads((folder / 'Inventory-Station-BUILD-MANIFEST.json').read_text())
 source = subprocess.check_output(['git','rev-parse','HEAD'], text=True).strip()
 assert source == manifest['source_commit']
-assert subprocess.check_output(['git','rev-parse',tag+'^{commit}'], text=True).strip() == source
+# Draft releases have no tag ref until publication. Resolve their selected
+# target now; publication pins that exact checked source SHA rather than a branch.
+target = release['targetCommitish']
+if re.fullmatch('[0-9a-f]{40}', target):
+    assert target == source
+else:
+    assert subprocess.check_output(['git','rev-parse','refs/remotes/origin/'+target], text=True).strip() == source
 for line in (folder / 'SHA256SUMS.txt').read_text().splitlines():
     expected, name = line.split('  ', 1)
     assert Path(name).name == name and re.fullmatch('[0-9a-f]{64}', expected)
