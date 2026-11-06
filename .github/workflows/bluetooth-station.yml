@@ -10,6 +10,10 @@ on:
         description: 'Existing draft station release tag (blank runs checks only)'
         required: false
         type: string
+      source_commit:
+        description: 'Exact source commit in BUILD-MANIFEST (blank uses current)'
+        required: false
+        type: string
       apk_sha256:
         description: 'SHA-256 of the exact retained-key signed APK in that draft'
         required: false
@@ -22,6 +26,8 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.source_commit || github.sha }}
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -44,6 +50,8 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.source_commit || github.sha }}
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
@@ -58,6 +66,9 @@ jobs:
             firmware/.pio/build/esp32-32e/bootloader.bin
             firmware/.pio/build/esp32-32e/partitions.bin
   installer:
+    # GitHub requires repository push access to read unpublished draft releases.
+    permissions:
+      contents: write
     if: github.event_name == 'workflow_dispatch' && inputs.release_tag != ''
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -69,6 +80,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: ${{ inputs.source_commit || github.sha }}
           fetch-depth: 0
       - uses: actions/setup-java@v4
         with:
@@ -107,6 +119,7 @@ jobs:
       GH_TOKEN: ${{ github.token }}
       GH_REPO: ${{ github.repository }}
       STATION_RELEASE_TAG: ${{ inputs.release_tag }}
+      STATION_SOURCE_COMMIT: ${{ inputs.source_commit || github.sha }}
     steps:
       - uses: actions/download-artifact@v4
         with:
@@ -121,5 +134,5 @@ jobs:
           r = json.loads(subprocess.check_output(['gh','release','view',tag,'--json','isDraft,isPrerelease']))
           assert r['isDraft'] is True
           subprocess.run(['gh','release','upload',tag,'evidence/Inventory-Station-INSTALL-CHECK.json'], check=True)
-          subprocess.run(['gh','release','edit',tag,'--target',os.environ['GITHUB_SHA'],'--draft=false','--prerelease','--latest=false'], check=True)
+          subprocess.run(['gh','release','edit',tag,'--target',os.environ['STATION_SOURCE_COMMIT'],'--draft=false','--prerelease','--latest=false'], check=True)
           PY
