@@ -47,6 +47,21 @@ public final class MainActivity extends Activity {
   String exportName;
   Runnable pending;
   AlertDialog progress;
+  TerminalLink terminal;
+  Model summaryModel;
+  String summaryDay = "", summaryZone = "";
+  TerminalProtocol.Summary cachedSummary;
+  AlertDialog stationDialog, stationTransactionForm;
+  TextView stationStatus;
+  String terminalStatus = "Not connected", stationBorrower = "", stationMode = "issue";
+  String scanPurpose = "item";
+  final Handler terminalHandler = new Handler(Looper.getMainLooper());
+  final Runnable terminalPulse = new Runnable() {
+    public void run() {
+      publishTerminal();
+      if (terminal != null) terminalHandler.postDelayed(this, 2000);
+    }
+  };
 
   interface Work {
     void run() throws Exception;
@@ -61,6 +76,7 @@ public final class MainActivity extends Activity {
     super.onCreate(state);
     getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);
     if (state != null) {
+      scanPurpose = state.getString("scanPurpose", "item");
       query = state.getString("query", "");
       tab = state.getInt("tab", 0);
       filter = state.getInt("filter", 0);
@@ -72,6 +88,7 @@ public final class MainActivity extends Activity {
   @Override
   public void onSaveInstanceState(Bundle b) {
     super.onSaveInstanceState(b);
+    b.putString("scanPurpose", scanPurpose);
     b.putString("query", query);
     b.putInt("tab", tab);
     b.putInt("filter", filter);
@@ -112,12 +129,15 @@ public final class MainActivity extends Activity {
     for (Dialog d : new ArrayList<>(dialogs)) if (d.isShowing()) d.dismiss();
     dialogs.clear();
     resumed = false;
+    publishTerminal();
     stopped = SystemClock.elapsedRealtime();
   }
 
   @Override
   public void onDestroy() {
     super.onDestroy();
+    terminalHandler.removeCallbacksAndMessages(null);
+    if (terminal != null) terminal.close();
     worker.shutdown();
     if (exportData != null) Arrays.fill(exportData, (byte) 0);
   }
@@ -152,6 +172,8 @@ public final class MainActivity extends Activity {
   }
 
   void locked() {
+    stationBorrower = "";
+    publishTerminal();
     for (Dialog d : new ArrayList<>(dialogs)) if (d.isShowing()) d.dismiss();
     dialogs.clear();
     root = column();
@@ -742,6 +764,11 @@ public final class MainActivity extends Activity {
           model = storage.snapshot();
           home();
           toast("Saved");
+          if (d != null && d == stationTransactionForm) {
+            stationTransactionForm = null;
+            publishTerminal();
+            station();
+          }
         });
   }
 
@@ -919,7 +946,7 @@ public final class MainActivity extends Activity {
     Model.Item i = model.item(id);
     LinearLayout f = form();
     f.addView(label(i.name + " · " + model.available(id) + " available", 18, NAVY));
-    EditText borrower = field(f, "Borrower name / ID", "", false),
+    EditText borrower = field(f, "Borrower name / ID", stationBorrower, false),
         qty = field(f, "Quantity", "1", true);
     CheckBox consumed = new CheckBox(this);
     consumed.setText(R.string.consumed);
@@ -1098,11 +1125,16 @@ public final class MainActivity extends Activity {
   }
 
   void scan() {
+    scanFor("item");
+  }
+
+  void scanFor(String purpose) {
     if (busy) return;
+    scanPurpose = purpose;
     new IntentIntegrator(this)
         .setCaptureActivity(SecureCaptureActivity.class)
         .setDesiredBarcodeFormats(IntentIntegrator.ALL_CODE_TYPES)
-        .setPrompt("Scan an item barcode or QR label")
+        .setPrompt(purpose.equals("borrower") ? "Scan borrower ID" : "Scan an item barcode or QR label")
         .setBeepEnabled(false)
         .setOrientationLocked(false)
         .initiateScan();
@@ -1125,6 +1157,165 @@ public final class MainActivity extends Activity {
     }
   }
 
+  TerminalProtocol.Summary currentSummary() {
+    String today = LocalDate.now().toString(), zone = ZoneId.systemDefault().toString();
+    if (cachedSummary == null || summaryModel != model || !summaryDay.equals(today) || !summaryZone.equals(zone)) {
+      cachedSummary = TerminalProtocol.summary(model, LocalDate.parse(today), ZoneId.of(zone));
+      summaryModel = model; summaryDay = today; summaryZone = zone;
+    }
+    return cachedSummary;
+  }
+
+  void publishTerminal() {
+    if (terminal == null) return;
+    com.google.gson.JsonObject state = TerminalProtocol.frame("state", terminal.session());
+    boolean active = unlocked && resumed && model != null;
+    state.addProperty("active", active);
+    if (active) {
+      TerminalProtocol.Summary daily = currentSummary();
+      state.addProperty("day", daily.day);
+      state.addProperty("borrower", stationBorrower);
+      state.addProperty("mode", stationMode);
+      state.addProperty("issued", daily.issued);
+      state.addProperty("returned", daily.returned);
+      state.addProperty("outstanding", daily.outstanding);
+      state.addProperty("overdue", daily.overdue);
+      state.addProperty("warnings", daily.unreadableEvents);
+    }
+    terminal.state(state.toString());
+  }
+
+  void dailySummary() {
+    new SafeDialog(this).setTitle("Daily summary")
+        .setMessage(currentSummary().text()
+            + "\n\nIssued counts borrowed units; consumed materials remain in audit history.")
+        .setPositiveButton("OK", null).show();
+    publishTerminal();
+  }
+
+  void station() {
+    if (busy || model == null || !unlocked || !resumed) return;
+    if (stationDialog != null && stationDialog.isShowing()) stationDialog.dismiss();
+    LinearLayout f = form();
+    stationStatus = label(terminalStatus, 15, NAVY);
+    f.addView(stationStatus);
+    f.addView(label("Borrower: " + (stationBorrower.isEmpty() ? "Scan an ID to begin" : stationBorrower), 18, INK));
+    f.addView(label("Mode: " + (stationMode.equals("issue") ? "Issue" : "Return")
+        + " · Confirm each transaction on this phone.", 14, MUTED));
+    stationDialog = dialog("Inventory station", f);
+    stationDialog.getButton(AlertDialog.BUTTON_NEGATIVE).setText("Close");
+    button(f, "Connect Bluetooth terminal", this::chooseTerminal, false);
+    if (terminal != null) button(f, "Disconnect terminal", () -> {
+      terminal.close(); terminal = null; terminalStatus = "Not connected"; station();
+    }, false);
+    button(f, "Scan borrower ID", () -> { stationDialog.dismiss(); scanFor("borrower"); }, false);
+    button(f, "Type borrower ID", () -> {
+      stationDialog.dismiss();
+      LinearLayout entry = form();
+      EditText id = field(entry, "Borrower ID", stationBorrower, false);
+      AlertDialog d = dialog("Borrower", entry);
+      button(entry, "Select borrower", () -> {
+        try { stationBorrower = borrowerCode(val(id)); d.dismiss(); publishTerminal(); station(); }
+        catch (Exception e) { error(e); }
+      }, true);
+    }, false);
+    button(f, "Issue items", () -> { stationMode = "issue"; publishTerminal(); station(); }, false);
+    button(f, "Return items", () -> { stationMode = "return"; publishTerminal(); station(); }, false);
+    button(f, "Scan item", () -> {
+      stationDialog.dismiss(); scanFor(stationBorrower.isEmpty() ? "borrower" : "station");
+    }, true);
+    button(f, "Daily summary", () -> { stationDialog.dismiss(); dailySummary(); }, false);
+    button(f, "Clear borrower", () -> { stationBorrower = ""; publishTerminal(); station(); }, false);
+  }
+
+  static String borrowerCode(String value) {
+    String code = Model.code(value);
+    Model.check(code.length() <= 120, "Borrower ID must be at most 120 characters");
+    return code;
+  }
+
+  void stationScanned(String purpose, String contents) {
+    if (purpose.equals("item")) { scanned(contents); return; }
+    try {
+      if (purpose.equals("borrower")) {
+        stationBorrower = borrowerCode(contents);
+        publishTerminal(); station(); return;
+      }
+      Model.check(!stationBorrower.isEmpty(), "Scan borrower ID before scanning items");
+      Model.Item item = model.byCode(Model.code(contents));
+      Model.check(item != null, "Label is not registered. Register the item in Items first.");
+      if (stationMode.equals("issue")) {
+        issueForm(item.id);
+        stationTransactionForm = dialogs.isEmpty() ? null : (AlertDialog) dialogs.get(dialogs.size() - 1);
+        return;
+      }
+      ArrayList<Model.Loan> matches = new ArrayList<>();
+      for (Model.Loan l : model.loans)
+        if (l.itemId.equals(item.id) && l.borrower.equals(stationBorrower) && l.quantity > l.returned)
+          matches.add(l);
+      Model.check(!matches.isEmpty(), "No outstanding issue for this borrower and item");
+      if (matches.size() == 1) stationReturnForm(matches.get(0).id);
+      else {
+        String[] titles = matches.stream().map(l -> (l.quantity - l.returned) + " units · Due "
+            + l.due + " · " + l.id.substring(0, 8)).toArray(String[]::new);
+        new SafeDialog(this).setTitle("Choose issue to return").setItems(titles,
+            (d, which) -> stationReturnForm(matches.get(which).id)).setNegativeButton("Cancel", null).show();
+      }
+    } catch (Exception e) { error(e); }
+  }
+
+  void stationReturnForm(String loanId) {
+    returnForm(loanId);
+    stationTransactionForm = dialogs.isEmpty() ? null : (AlertDialog) dialogs.get(dialogs.size() - 1);
+  }
+
+  void terminalRequest(String action) {
+    if (!resumed || !unlocked || model == null || busy) return;
+    // Terminal cannot interrupt a confirmation, edit, export, or scan.
+    if (!dialogs.isEmpty() && !(dialogs.size() == 1 && dialogs.contains(stationDialog))) return;
+    if (stationDialog != null) stationDialog.dismiss();
+    if (action.equals("summary")) { dailySummary(); return; }
+    if (action.equals("borrower")) { scanFor("borrower"); return; }
+    stationMode = action;
+    publishTerminal();
+    scanFor(stationBorrower.isEmpty() ? "borrower" : "station");
+  }
+
+  void chooseTerminal() {
+    if (Build.VERSION.SDK_INT >= 31 && checkSelfPermission(android.Manifest.permission.BLUETOOTH_CONNECT)
+        != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+      requestPermissions(new String[] {android.Manifest.permission.BLUETOOTH_CONNECT}, 61);
+      toast("Allow Nearby devices, then tap Connect Bluetooth terminal again");
+      return;
+    }
+    try {
+      android.bluetooth.BluetoothManager manager = getSystemService(android.bluetooth.BluetoothManager.class);
+      android.bluetooth.BluetoothAdapter adapter = manager == null ? null : manager.getAdapter();
+      Model.check(adapter != null && adapter.isEnabled(), "Enable Bluetooth and pair Diversify-Inventory in phone settings first");
+      ArrayList<android.bluetooth.BluetoothDevice> devices = new ArrayList<>(adapter.getBondedDevices());
+      Model.check(!devices.isEmpty(), "Pair Diversify-Inventory in phone Bluetooth settings first");
+      String[] names = devices.stream().map(d -> d.getName() + " · " + d.getAddress()).toArray(String[]::new);
+      new SafeDialog(this).setTitle("Paired terminals").setItems(names, (d, which) -> {
+        if (terminal != null) terminal.close();
+        final TerminalLink[] link = {null};
+        link[0] = new TerminalLink(new TerminalLink.Listener() {
+          public void status(String status) {
+            if (terminal != link[0]) return;
+            terminalStatus = status;
+            if (stationStatus != null) stationStatus.setText(status);
+            publishTerminal();
+          }
+          public void request(String action) { if (terminal == link[0]) terminalRequest(action); }
+        });
+        terminal = link[0];
+        terminalHandler.removeCallbacks(terminalPulse);
+        terminalHandler.post(terminalPulse);
+        terminal.connect(devices.get(which));
+        publishTerminal();
+      }).setNegativeButton("Cancel", null).show();
+    } catch (Exception e) { error(e); }
+  }
+
   void dataMenu() {
     String[] options = {
       "Export CSV reports",
@@ -1132,7 +1323,8 @@ public final class MainActivity extends Activity {
       "Backup & recovery",
       showArchived ? "Show active items" : "Show archived items",
       "Lock Inventory",
-      "About"
+      "About",
+      "Borrower / Bluetooth station"
     };
     new SafeDialog(this)
         .setTitle("Data & security")
@@ -1163,6 +1355,7 @@ public final class MainActivity extends Activity {
                   locked();
                   authenticate();
                 }
+                case 6 -> station();
                 case 5 ->
                     new SafeDialog(this)
                         .setTitle("Inventory " + BuildConfig.VERSION_NAME)
@@ -1383,7 +1576,10 @@ public final class MainActivity extends Activity {
     }
     IntentResult scan = IntentIntegrator.parseActivityResult(request, result, data);
     if (scan != null) {
-      if (scan.getContents() != null) pending = () -> scanned(scan.getContents());
+      String purpose = scanPurpose;
+      scanPurpose = "item";
+      if (scan.getContents() != null) pending = () -> stationScanned(purpose, scan.getContents());
+      else if (!purpose.equals("item")) pending = this::station;
       return;
     }
     if (result != RESULT_OK || data == null || data.getData() == null) {

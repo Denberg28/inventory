@@ -64,3 +64,10 @@ Build from a clean Git checkout on Windows with Python 3.12. ZIP output contains
 ## Limits
 
 Single workstation; whole quantities; no cloud sync, authentication, reservations, repair scheduling or automatic hardware control. Printed/manufacturer barcodes can be entered; label generation is outside this MVP. Multi-user direct database access is unsupported. Native Windows install/DPI, real scanner, target-PC endurance, physical power loss and schema-1 migration remain **BLOCKED** until validated using [TESTING.md](docs/TESTING.md). No stable readiness is claimed.
+
+## Bluetooth touchscreen station
+
+Android 0.3.0-rc.1 adds borrower-ID-first scanning, issue/return modes and daily
+status on an ESP32-WROOM-32E terminal over Bluetooth. See [setup, compatibility
+and hardware checks](docs/BLUETOOTH-STATION.md). The phone remains the encrypted
+database; every stock/custody change requires phone confirmation.

@@ -32,3 +32,11 @@ Use disposable data first. Record OS version, Python/Tk or EXE build/source comm
 CI Windows Server packaging/build/probe is distinct from Windows 10/11 installation/DPI and physical-scanner validation. The baseline CI succeeded; require a successful Actions run for the exact new source commit. A private artifact is a test candidate, not a stable release.
 
 Report PASS/FAIL/BLOCKED/NOT TESTED with configuration, expected/actual measurements and logs. Failures block stable release and invalidate affected evidence.
+
+## Bluetooth station
+
+See [station acceptance criteria, protocol and HIL procedure](BLUETOOTH-STATION.md).
+Android regression and ESP32 compile are required candidate gates. Signed APK
+publication additionally requires the exact draft APK to pass the emulator installer
+workflow, checksum/source checks and retained-key rc5 upgrade installation. Physical
+board, SPP and phone checks remain BLOCKED and prevent stable promotion.

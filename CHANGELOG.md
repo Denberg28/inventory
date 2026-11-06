@@ -15,3 +15,12 @@ This is a new source candidate, not a recovered byte-for-byte v0.1.0a2 or a stab
 ## Historical candidates
 
 0.1.0a1 and 0.1.0a2 were previously produced as local source candidates. Their artifacts cannot currently be retrieved. Historical commit IDs and reported results are recorded in RECOVERY.md for provenance only; they are not present in this repository's reconstructed history.
+
+## Bluetooth station candidate — 6 November 2026
+
+- Android 0.3.0-rc.1: borrower scan/type, issue/return scan workflow, local daily
+  summary and bonded Bluetooth Classic terminal link; encrypted schema remains 1.
+- Terminal 0.1.0-rc.1: E32R40T display/touch profile, calibration, pairing code
+  confirmation on BOOT, summary and four navigation buttons; stale/locked data clearing.
+- Session/sequence/length validation and explicit reconnect. Physical Bluetooth,
+  board profile and touchscreen gates remain blocked pending hardware checks.

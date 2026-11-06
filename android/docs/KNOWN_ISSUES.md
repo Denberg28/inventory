@@ -30,3 +30,16 @@
   enforced. There is no automatic history pruning, warehouse-scale performance validation,
   printing of labels, borrower/quantity editing or loan deletion, or notification scheduler.
 - Debug-signed candidate. Stable signing continuity and distribution are future gates.
+
+## Bluetooth station candidate
+
+- Exact LAFVIN PCB/profile match, Bluetooth SSP/SPP pairing, touch calibration and
+  real phone permission/lifecycle gates are NOT TESTED. The E32R40T reference
+  profile must be compared with the supplier board pinout before flashing.
+- One foreground unlocked phone is the database authority. No ESP32 offline
+  transaction journal, microSD sync, borrower directory or multi-phone merge.
+- Station returns match the exact borrower ID stored on the original loan.
+  Name-only older loans need the existing Unreturned workflow.
+- Imported legacy free-text audit entries that cannot be parsed are excluded
+  from daily unit totals and counted in a warning on the phone summary.
+- Screen font is intended for Latin identifiers; read full Unicode IDs on the phone.
